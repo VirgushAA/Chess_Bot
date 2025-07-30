@@ -6,12 +6,12 @@ import (
 )
 
 type Board struct {
-	Grid [64]int
+	Board [64]uint8
 }
 
 func NewBoard() *Board {
-	b := &Board{Grid: [64]int{-4, -3, -2, -5, -6, -2, -3, -4,
-		-1, -1, -1, -1, -1, -1, -1, -1,
+	b := &Board{Board: [64]uint8{4, 3, 2, 5, 6, 2, 3, 4,
+		1, 1, 1, 1, 1, 1, 1, 1,
 		0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0,
@@ -23,48 +23,67 @@ func NewBoard() *Board {
 
 	return b
 }
-func (b *Board) At(row, col int) int {
-	return b.Grid[row*8+col]
+
+// Извлечь тип фигуры
+func (b *Board) GetPieceType(index int) PieceType {
+	value := b.Board[index]
+	return PieceType(value & 0x7) // Маска 0000 0111
 }
-func (b *Board) Set(row, col, val int) {
-	b.Grid[row*8+col] = val
+
+// Извлечь цвет фигуры
+func (b *Board) GetPieceColor(index int) Color {
+	value := b.Board[index]
+	return Color((value >> 3) & 0x1) // Сдвиг на 3 и маска 0000 0001
+}
+
+// Установить тип и цвет фигуры
+func (b *Board) SetPiece(index int, pieceType PieceType, color Color) {
+	var packedValue uint8 = (uint8(pieceType) | (uint8(color) << 3))
+	b.Board[index] = packedValue
+}
+
+func (b *Board) At(row, col int) uint8 {
+	return b.Board[row*8+col]
+}
+func (b *Board) Set(row, col int, val uint8) {
+	b.Board[row*8+col] = val
 }
 func (b *Board) Print() {
-	symbol := func(val int) string {
+	symbol := func(val uint8) string {
 		switch val {
 		case 0:
 			return "."
-		case 1, -1:
+		case 1:
 			if val > 0 {
 				return "P"
 			} else {
 				return "p"
 			}
-		case 2, -2:
+		case 2:
 			if val > 0 {
 				return "N"
 			} else {
 				return "n"
 			}
-		case 3, -3:
+		case 3:
 			if val > 0 {
 				return "B"
 			} else {
 				return "b"
 			}
-		case 4, -4:
+		case 4:
 			if val > 0 {
 				return "R"
 			} else {
 				return "r"
 			}
-		case 5, -5:
+		case 5:
 			if val > 0 {
 				return "Q"
 			} else {
 				return "q"
 			}
-		case 6, -6:
+		case 6:
 			if val > 0 {
 				return "K"
 			} else {
