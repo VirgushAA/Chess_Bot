@@ -14,7 +14,10 @@ type GameState struct {
 }
 
 func (g *Game) PlayATurn(row_from, col_from, row_to, col_to int) {
-	g.MakeAMove(g.PassMove(row_from, col_from, row_to, col_to))
+	pos_from := Position{Row: row_from, Col: col_from}
+	pos_to := Position{Row: row_to, Col: col_to}
+
+	g.MakeAMove(g.PassMove(pos_from, pos_to))
 }
 
 func (g *Game) GameStart() {
@@ -29,10 +32,10 @@ func (g *Game) NewGame() {
 	g.GameState.Stalemate = false
 	g.GameState.GameOver = false
 }
-func (g *Game) PassMove(row_from, col_from, row_to, col_to int) Move {
+func (g *Game) PassMove(pos_from, pos_to Position) Move {
 	move := Move{}
-	move.FromPosition = row_from*8 + col_from
-	move.ToPosition = row_to*8 + col_to
+	move.FromPosition = pos_from.Row*8 + pos_from.Col
+	move.ToPosition = pos_to.Row*8 + pos_to.Col
 	return move
 }
 

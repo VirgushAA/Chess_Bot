@@ -13,12 +13,12 @@ func main() {
 	game.GameStart()
 	game.GameState.Board.Print()
 	for !game.GameState.GameOver {
-		print("Введи свой ход! (В формате \"е2-е4\" пожалуйстаю)\n")
+		print("Введи свой ход! (В формате \"е2-е4\" пожалуйста)\n")
 		var input string
 		fmt.Scanln(&input)
 		pos_from, pos_to, err_input := parseMoves(input)
 		if err_input != nil {
-			fmt.Println(err_input)
+			// fmt.Println(err_input)
 			continue
 		}
 		row_from, col_from, err_from := convertPositionToIndex(pos_from)
