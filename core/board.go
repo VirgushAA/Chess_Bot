@@ -63,12 +63,10 @@ func (b *Board) RemovePiece(index int) {
 	b.Board[index] = 0
 }
 
-
-
-
 func (b *Board) At(row, col int) uint8 {
 	return b.Board[row*8+col]
 }
+
 func (b *Board) Set(row, col int, val uint8) {
 	b.Board[row*8+col] = val
 }
