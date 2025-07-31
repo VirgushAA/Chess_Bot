@@ -12,6 +12,19 @@ type GameState struct {
 	History   []Move
 }
 
+func (g *Game) Play() {
+	g.GameStart()
+}
+
+func (g *Game) GameStart() {
+	g.NewGame()
+}
+
+func (g *Game) NewGame() {
+	g.GameState = GameState{}
+	g.GameState.Board.Initialize()
+}
+
 func (g *Game) MakeAMove(move Move) error {
 
 	g.GameState.History = append(g.GameState.History, move)

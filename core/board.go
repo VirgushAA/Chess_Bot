@@ -9,21 +9,6 @@ type Board struct {
 	Board [64]uint8
 }
 
-func NewBoard() *Board {
-	b := &Board{Board: [64]uint8{4, 3, 2, 5, 6, 2, 3, 4,
-		1, 1, 1, 1, 1, 1, 1, 1,
-		0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0,
-		1, 1, 1, 1, 1, 1, 1, 1,
-		4, 3, 2, 5, 6, 2, 3, 4,
-	},
-	}
-
-	return b
-}
-
 func (b *Board) Initialize() {
 	for i := 8; i < 16; i++ {
 		b.Board[i] = EncodePiece(Pawn, White)
@@ -74,6 +59,13 @@ func (b *Board) SetPiece(index int, pieceType PieceType, color Color) {
 	b.Board[index] = packedValue
 }
 
+func (b *Board) RemovePiece(index int) {
+	b.Board[index] = 0
+}
+
+
+
+
 func (b *Board) At(row, col int) uint8 {
 	return b.Board[row*8+col]
 }
@@ -84,7 +76,7 @@ func (b *Board) Set(row, col int, val uint8) {
 func (b *Board) Print() {
 	pieceSymbols := [7]string{".", "P", "N", "B", "R", "Q", "K"}
 
-	for r := 7; r >= 0; r-- { // печатаем с 8 по 1 (чтобы белые были снизу, как в шахматах)
+	for r := 7; r >= 0; r-- { // печатаем с 8 рядв по 1 (чтобы белые были снизу)
 		for c := 0; c < 8; c++ {
 			p := b.At(r, c)
 			pt, color := DecodePiece(p)
@@ -98,135 +90,3 @@ func (b *Board) Print() {
 	}
 	fmt.Println()
 }
-
-// func (b *Board) Print() {
-// 	symbol := func(val int8) string {
-// 		if val > 16 {
-// 			val = (val - 17) * -1
-// 		}
-// 		switch val {
-// 		case 0:
-// 			return "."
-// 		case 1:
-// 			if val > 0 {
-// 				return "P"
-// 			} else {
-// 				return "p"
-// 			}
-// 		case 2:
-// 			if val > 0 {
-// 				return "N"
-// 			} else {
-// 				return "n"
-// 			}
-// 		case 3:
-// 			if val > 0 {
-// 				return "B"
-// 			} else {
-// 				return "b"
-// 			}
-// 		case 4:
-// 			if val > 0 {
-// 				return "R"
-// 			} else {
-// 				return "r"
-// 			}
-// 		case 5:
-// 			if val > 0 {
-// 				return "Q"
-// 			} else {
-// 				return "q"
-// 			}
-// 		case 6:
-// 			if val > 0 {
-// 				return "K"
-// 			} else {
-// 				return "k"
-// 			}
-// 		}
-// 		return "?"
-// 	}
-
-// 	for r := 0; r < 8; r++ {
-// 		for c := 0; c < 8; c++ {
-// 			fmt.Print(symbol(int8(b.At(r, c))), " ")
-// 		}
-// 		fmt.Println()
-// 	}
-// }
-
-// func (b *Board) Print() {
-// 	for i := 0; i < 64; i++ {
-// 		pt := b.GetPieceType(i)
-// 		color := b.GetPieceColor(i)
-// 		fmt.Print(pieceToChar(pt, color), " ")
-// 		if (i+1)%8 == 0 {
-// 			fmt.Println()
-// 		}
-// 	}
-// }
-
-// func pieceToChar(pt PieceType, color Color) string {
-// 	chars := [...]string{"·", "P", "N", "B", "R", "Q", "K"}
-// 	ch := chars[pt]
-// 	if color == Black {
-// 		return strings.ToLower(ch)
-// 	}
-// 	return ch
-// }
-
-// type Board struct {
-// 	Squares [8][8]*Piece
-// }
-
-// func NewBoard() *Board {
-// 	b := &Board{}
-
-// 	for col := 0; col < 8; col++ {
-// 		b.Squares[1][col] = &Piece{Type: Pawn, Color: White}
-// 		b.Squares[6][col] = &Piece{Type: Pawn, Color: Black}
-// 	}
-
-// 	backRank := []PieceType{Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook}
-
-// 	for col, piecType := range backRank {
-// 		b.Squares[0][col] = &Piece{Type: piecType, Color: White}
-// 		b.Squares[7][col] = &Piece{Type: piecType, Color: Black}
-// 	}
-
-// 	return b
-// }
-
-// func (B *Board) Print() {
-// 	for row := 7; row >= 0; row-- {
-// 		for col := 0; col < 8; col++ {
-// 			piece := B.Squares[row][col]
-// 			if piece == nil {
-// 				print(". ")
-// 				continue
-// 			}
-
-// 			symbol := pieceSymbol(piece)
-// 			print(symbol + " ")
-// 		}
-// 		println()
-// 	}
-// }
-
-// func pieceSymbol(p *Piece) string {
-// 	symbols := map[PieceType]string{
-// 		Pawn:   "P",
-// 		Knight: "N",
-// 		Bishop: "B",
-// 		Rook:   "R",
-// 		Queen:  "Q",
-// 		King:   "K",
-// 	}
-
-// 	s := symbols[p.Type]
-// 	if p.Color == Black {
-// 		s = strings.ToLower(s)
-// 	}
-
-// 	return s
-// }
