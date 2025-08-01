@@ -13,10 +13,9 @@ type GameState struct {
 	GameOver  bool
 }
 
-func (g *Game) PlayATurn(row_from, col_from, row_to, col_to int) {
-	pos_from := Position{Row: row_from, Col: col_from}
-	pos_to := Position{Row: row_to, Col: col_to}
+func (g *Game) PlayATurn(pos string) {
 
+	pos_from, pos_to := convertPositionToIndex(pos)
 	g.MakeAMove(g.PassMove(pos_from, pos_to))
 }
 
@@ -45,4 +44,12 @@ func (g *Game) MakeAMove(move Move) error {
 	g.GameState.History = append(g.GameState.History, move)
 	g.GameState.Turn = (g.GameState.Turn + 1) % 2
 	return nil
+}
+
+func convertPositionToIndex(pos string) (pos_from, pos_to Position) {
+	from := pos[:2]
+	to := pos[2:]
+	pos_from = Position{Row: int(from[1]) - '1', Col: int(from[0]) - 'a'}
+	pos_to = Position{Row: int(to[1]) - '1', Col: int(to[0]) - 'a'}
+	return
 }

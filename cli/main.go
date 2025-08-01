@@ -3,7 +3,6 @@ package main
 import (
 	. "Chess_Bot/core"
 	"fmt"
-	// "fmt"
 )
 
 var ()
@@ -16,47 +15,34 @@ func main() {
 		print("Введи свой ход! (В формате \"е2-е4\" пожалуйста)\n")
 		var input string
 		fmt.Scanln(&input)
-		pos_from, pos_to, err_input := parseMoves(input)
+		pos, err_input := processMoves(input)
 		if err_input != nil {
-			// fmt.Println(err_input)
+			fmt.Println(err_input)
 			continue
 		}
-		row_from, col_from, err_from := convertPositionToIndex(pos_from)
-		row_to, col_to, err_to := convertPositionToIndex(pos_to)
-		if err_from != nil {
-			fmt.Println(err_from)
-			continue
-		} else if err_to != nil {
-			fmt.Println(err_to)
-			continue
-		}
-		game.PlayATurn(row_from, col_from, row_to, col_to)
+		game.PlayATurn(pos)
 		game.GameState.Board.Print()
 	}
 }
 
-func parseMoves(moves string) (from, to string, err error) {
-	if len(moves) != 5 || moves[2] != '-' {
-		return "", "", fmt.Errorf("Я не понимаю что ты хочешь, введи ход нормально!")
+func processMoves(moves string) (processed string, err error) {
+	if !((len(moves) == 5 && moves[2] == '-') || len(moves) == 4) {
+		return "", fmt.Errorf("Я не понимаю что ты хочешь, введи ход нормально!")
 	}
-	from = moves[:2]
-	to = moves[3:]
-	return
-}
-
-func convertPositionToIndex(pos string) (row, col int, err error) {
-	if len(pos) != 2 || pos[0] < 'a' || pos[0] > 'h' || pos[1] < '1' || pos[1] > '8' {
-		return 0, 0, fmt.Errorf("Я не понимаю что ты хочешь, введи ход нормально!")
-	}
-	col = int(pos[0]) - 'a'
-	row = int(pos[1]) - '1'
-	return
-}
-func DumpMoveIndex(pos string) {
-	row, col, err := convertPositionToIndex(pos)
-	if err != nil {
-		fmt.Println(err)
+	var from, to string
+	if len(moves) == 5 {
+		from = moves[:2]
+		to = moves[3:]
 	} else {
-		fmt.Printf("Позиция %s соответствует координатам: %d %d\n", pos, row, col)
+		from = moves[:2]
+		to = moves[2:]
 	}
+	if len(from) != 2 || from[0] < 'a' || from[0] > 'h' || from[1] < '1' || from[1] > '8' {
+		return "", fmt.Errorf("Я не понимаю что ты хочешь, введи ход нормально!")
+	}
+	if len(to) != 2 || to[0] < 'a' || to[0] > 'h' || to[1] < '1' || to[1] > '8' {
+		return "", fmt.Errorf("Я не понимаю что ты хочешь, введи ход нормально!")
+	}
+	processed = from + to
+	return
 }
