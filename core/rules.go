@@ -39,8 +39,6 @@ var rookCandidates = []sliderMove{
 	{8, true, false},
 }
 
-var bishopDirections = []int{-9, -7, 7, 9}
-
 func GenerateMoves(pos int, board Board) (moves []Move) {
 	piece_color := board.GetPieceColor(pos)
 
@@ -64,7 +62,6 @@ func GenerateMoves(pos int, board Board) (moves []Move) {
 func generatePawnMoves(pos int, board Board, color Color) (moves []Move) {
 	return
 }
-
 func generateKnightMoves(pos int, board Board, color Color) (moves []Move) {
 	for _, c := range knightCandidates {
 		new_pos := pos + c.offset
@@ -87,7 +84,6 @@ func generateKnightMoves(pos int, board Board, color Color) (moves []Move) {
 	}
 	return
 }
-
 func generateBishopMoves(pos int, board Board, color Color) (moves []Move) {
 	for _, direction := range bishopCandidates {
 		new_pos := pos
@@ -114,7 +110,6 @@ func generateBishopMoves(pos int, board Board, color Color) (moves []Move) {
 	}
 	return
 }
-
 func generateRookMoves(pos int, board Board, color Color) (moves []Move) {
 	for _, direction := range rookCandidates {
 		new_pos := pos
@@ -167,15 +162,4 @@ func generateKingMoves(pos int, board Board, color Color) (moves []Move) {
 		}
 	}
 	return
-}
-
-func file(pos int) int { return pos % 8 }
-
-func rank(pos int) int { return pos / 8 }
-
-func abs(x int) int {
-	if x < 0 {
-		return -x
-	}
-	return x
 }
