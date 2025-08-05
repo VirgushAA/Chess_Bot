@@ -5,12 +5,13 @@ type Game struct {
 }
 
 type GameState struct {
-	Board     Board
-	Turn      Color
-	InCheck   bool
-	Stalemate bool
-	History   []Move
-	GameOver  bool
+	Board            Board
+	Turn             Color
+	InCheck          bool
+	Stalemate        bool
+	History          []Move
+	GameOver         bool
+	EnPassant_target int
 }
 
 func (g *Game) PlayATurn(pos string) {
@@ -21,7 +22,6 @@ func (g *Game) PlayATurn(pos string) {
 
 func (g *Game) GameStart() {
 	g.NewGame()
-
 }
 
 func (g *Game) NewGame() {
@@ -39,10 +39,20 @@ func (g *Game) PassMove(pos_from, pos_to Position) Move {
 }
 
 func (g *Game) MakeAMove(move Move) error {
-	g.GameState.Board.SetPiece(move.ToPosition, g.GameState.Board.GetPieceType(move.FromPosition), g.GameState.Board.GetPieceColor(move.FromPosition))
-	g.GameState.Board.RemovePiece(move.FromPosition)
-	g.GameState.History = append(g.GameState.History, move)
-	g.GameState.Turn = (g.GameState.Turn + 1) % 2
+	legalMoves := GenerateMoves(move.FromPosition, &g.GameState)
+	im_legal := false
+	for _, m := range legalMoves {
+		if move == m {
+			im_legal = true
+			break
+		}
+	}
+	if im_legal {
+		g.GameState.Board.SetPiece(move.ToPosition, g.GameState.Board.GetPieceType(move.FromPosition), g.GameState.Board.GetPieceColor(move.FromPosition))
+		g.GameState.Board.RemovePiece(move.FromPosition)
+		g.GameState.History = append(g.GameState.History, move)
+		g.GameState.Turn = (g.GameState.Turn + 1) % 2
+	}
 	return nil
 }
 

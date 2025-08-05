@@ -39,40 +39,96 @@ var rookCandidates = []sliderMove{
 	{8, true, false},
 }
 
-func GenerateMoves(pos int, board Board) (moves []Move) {
-	piece_color := board.GetPieceColor(pos)
+func GenerateMoves(pos int, GameState *GameState) (moves []Move) {
+	piece_color := GameState.Board.GetPieceColor(pos)
 
-	switch board.GetPieceType(pos) {
+	if GameState.Board.GetPieceColor(pos) != GameState.Turn {
+		return
+	}
+
+	switch GameState.Board.GetPieceType(pos) {
 	case Pawn:
-		moves = generatePawnMoves(pos, board, piece_color)
+		moves = generatePawnMoves(pos, GameState, piece_color)
 	case Knight:
-		moves = generateKnightMoves(pos, board, piece_color)
+		moves = generateKnightMoves(pos, GameState, piece_color)
 	case Bishop:
-		moves = generateBishopMoves(pos, board, piece_color)
+		moves = generateBishopMoves(pos, GameState, piece_color)
 	case Rook:
-		moves = generateRookMoves(pos, board, piece_color)
+		moves = generateRookMoves(pos, GameState, piece_color)
 	case Queen:
-		moves = generateQueenMoves(pos, board, piece_color)
+		moves = generateQueenMoves(pos, GameState, piece_color)
 	case King:
-		moves = generateKingMoves(pos, board, piece_color)
+		moves = generateKingMoves(pos, GameState, piece_color)
 	}
 	return
 }
 
-func generatePawnMoves(pos int, board Board, color Color) (moves []Move) {
+func generatePawnMoves(pos int, GameState *GameState, color Color) (moves []Move) {
+	switch color {
+	case White:
+		new_pos := pos + 8
+		target := GameState.Board.Board[new_pos]
+		if target == 0 {
+			moves = append(moves, Move{FromPosition: pos, ToPosition: new_pos})
+		}
+		if (pos/8)+1 == 2 {
+			new_pos = new_pos + 8
+			target = GameState.Board.Board[new_pos]
+			if target == 0 {
+				moves = append(moves, Move{FromPosition: pos, ToPosition: new_pos})
+			}
+		}
+		new_pos = pos + 7
+		target = GameState.Board.Board[new_pos]
+		_, targetColor := DecodePiece(target)
+		if targetColor != color {
+			moves = append(moves, Move{FromPosition: pos, ToPosition: new_pos})
+		}
+		new_pos = pos + 9
+		target = GameState.Board.Board[new_pos]
+		_, targetColor = DecodePiece(target)
+		if targetColor != color {
+			moves = append(moves, Move{FromPosition: pos, ToPosition: new_pos})
+		}
+	case Black:
+		new_pos := pos - 8
+		target := GameState.Board.Board[new_pos]
+		if target == 0 {
+			moves = append(moves, Move{FromPosition: pos, ToPosition: new_pos})
+		}
+		if (pos/8)+1 == 7 {
+			new_pos = new_pos - 8
+			target = GameState.Board.Board[new_pos]
+			if target == 0 {
+				moves = append(moves, Move{FromPosition: pos, ToPosition: new_pos})
+			}
+		}
+		new_pos = pos - 7
+		target = GameState.Board.Board[new_pos]
+		_, targetColor := DecodePiece(target)
+		if targetColor != color {
+			moves = append(moves, Move{FromPosition: pos, ToPosition: new_pos})
+		}
+		new_pos = pos - 9
+		target = GameState.Board.Board[new_pos]
+		_, targetColor = DecodePiece(target)
+		if targetColor != color {
+			moves = append(moves, Move{FromPosition: pos, ToPosition: new_pos})
+		}
+	}
 	return
 }
-func generateKnightMoves(pos int, board Board, color Color) (moves []Move) {
+func generateKnightMoves(pos int, GameState *GameState, color Color) (moves []Move) {
 	for _, c := range knightCandidates {
 		new_pos := pos + c.offset
 		if new_pos < 0 || new_pos > 63 {
 			continue
 		}
 		file := new_pos % 8
-		if (c.badL && file == 0) || (c.badLL && file <= 1) || (c.badR && file == 7) || (c.badRR && file >= 6) {
+		if (c.badL && file == 1) || (c.badLL && file <= 2) || (c.badR && file == 8) || (c.badRR && file >= 7) {
 			continue
 		}
-		target := board.Board[new_pos]
+		target := GameState.Board.Board[new_pos]
 		if target == 0 {
 			moves = append(moves, Move{FromPosition: pos, ToPosition: new_pos})
 		} else {
@@ -84,7 +140,7 @@ func generateKnightMoves(pos int, board Board, color Color) (moves []Move) {
 	}
 	return
 }
-func generateBishopMoves(pos int, board Board, color Color) (moves []Move) {
+func generateBishopMoves(pos int, GameState *GameState, color Color) (moves []Move) {
 	for _, direction := range bishopCandidates {
 		new_pos := pos
 		for {
@@ -96,7 +152,7 @@ func generateBishopMoves(pos int, board Board, color Color) (moves []Move) {
 			if (direction.badL && file == 0) || (direction.badR && file == 7) {
 				break
 			}
-			target := board.Board[new_pos]
+			target := GameState.Board.Board[new_pos]
 			if target == 0 {
 				moves = append(moves, Move{FromPosition: pos, ToPosition: new_pos})
 			} else {
@@ -110,7 +166,7 @@ func generateBishopMoves(pos int, board Board, color Color) (moves []Move) {
 	}
 	return
 }
-func generateRookMoves(pos int, board Board, color Color) (moves []Move) {
+func generateRookMoves(pos int, GameState *GameState, color Color) (moves []Move) {
 	for _, direction := range rookCandidates {
 		new_pos := pos
 		for {
@@ -122,7 +178,7 @@ func generateRookMoves(pos int, board Board, color Color) (moves []Move) {
 			if (direction.badL && file == 0) || (direction.badR && file == 7) {
 				break
 			}
-			target := board.Board[new_pos]
+			target := GameState.Board.Board[new_pos]
 			if target == 0 {
 				moves = append(moves, Move{FromPosition: pos, ToPosition: new_pos})
 			} else {
@@ -136,12 +192,12 @@ func generateRookMoves(pos int, board Board, color Color) (moves []Move) {
 	}
 	return
 }
-func generateQueenMoves(pos int, board Board, color Color) (moves []Move) {
-	moves = append(moves, generateBishopMoves(pos, board, color)...)
-	moves = append(moves, generateRookMoves(pos, board, color)...)
+func generateQueenMoves(pos int, GameState *GameState, color Color) (moves []Move) {
+	moves = append(moves, generateBishopMoves(pos, GameState, color)...)
+	moves = append(moves, generateRookMoves(pos, GameState, color)...)
 	return
 }
-func generateKingMoves(pos int, board Board, color Color) (moves []Move) {
+func generateKingMoves(pos int, GameState *GameState, color Color) (moves []Move) {
 	for _, direction := range append(bishopCandidates, rookCandidates...) {
 		new_pos := pos + direction.offset
 		if new_pos < 0 || new_pos > 63 {
@@ -151,7 +207,7 @@ func generateKingMoves(pos int, board Board, color Color) (moves []Move) {
 		if (direction.badL && file == 0) || (direction.badR && file == 7) {
 			continue
 		}
-		target := board.Board[new_pos]
+		target := GameState.Board.Board[new_pos]
 		if target == 0 {
 			moves = append(moves, Move{FromPosition: pos, ToPosition: new_pos})
 		} else {
