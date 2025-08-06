@@ -28,15 +28,15 @@ type sliderMove struct {
 var bishopCandidates = []sliderMove{
 	{-9, true, false},
 	{-7, false, true},
-	{7, false, true},
-	{9, true, false},
+	{7, true, false},
+	{9, false, true},
 }
 
 var rookCandidates = []sliderMove{
 	{-8, false, false},
 	{-1, true, false},
 	{1, false, true},
-	{8, true, false},
+	{8, false, false},
 }
 
 func GenerateMoves(pos int, GameState *GameState) (moves []Move) {
@@ -64,25 +64,20 @@ func GenerateMoves(pos int, GameState *GameState) (moves []Move) {
 }
 
 func generatePawnMoves(pos int, gs *GameState, color Color) (moves []Move) {
-	dir := 8 // forward direction
+	dir := 8
 	startRank := 1
-	// promotionRank := 7
 
 	if color == Black {
 		dir = -8
 		startRank = 6
-		// promotionRank = 0
 	}
 
 	row := pos / 8
 	col := pos % 8
 
-	// Forward 1
 	oneStep := pos + dir
 	if oneStep >= 0 && oneStep < 64 && gs.Board.Board[oneStep] == 0 {
 		moves = append(moves, Move{FromPosition: pos, ToPosition: oneStep})
-
-		// Forward 2 from start position
 		if row == startRank {
 			twoStep := pos + 2*dir
 			if gs.Board.Board[twoStep] == 0 {
@@ -91,11 +86,10 @@ func generatePawnMoves(pos int, gs *GameState, color Color) (moves []Move) {
 		}
 	}
 
-	// Captures (diagonal left and right)
 	for _, dc := range []int{-1, 1} {
 		captureCol := col + dc
 		if captureCol < 0 || captureCol > 7 {
-			continue // off the board horizontally
+			continue
 		}
 		diagPos := pos + dir + dc
 		if diagPos < 0 || diagPos >= 64 {
@@ -116,61 +110,6 @@ func generatePawnMoves(pos int, gs *GameState, color Color) (moves []Move) {
 	return
 }
 
-// func generatePawnMoves(pos int, GameState *GameState, color Color) (moves []Move) {
-// 	switch color {
-// 	case White:
-// 		new_pos := pos + 8
-// 		target := GameState.Board.Board[new_pos]
-// 		if target == 0 {
-// 			moves = append(moves, Move{FromPosition: pos, ToPosition: new_pos})
-// 		}
-// 		if (pos/8)+1 == 2 {
-// 			new_pos = new_pos + 8
-// 			target = GameState.Board.Board[new_pos]
-// 			if target == 0 {
-// 				moves = append(moves, Move{FromPosition: pos, ToPosition: new_pos})
-// 			}
-// 		}
-// 		new_pos = pos + 7
-// 		target = GameState.Board.Board[new_pos]
-// 		_, targetColor := DecodePiece(target)
-// 		if (targetColor != color || new_pos == GameState.EnPassant_target) && pos%8 != 1 {
-// 			moves = append(moves, Move{FromPosition: pos, ToPosition: new_pos})
-// 		}
-// 		new_pos = pos + 9
-// 		target = GameState.Board.Board[new_pos]
-// 		_, targetColor = DecodePiece(target)
-// 		if (targetColor != color || new_pos == GameState.EnPassant_target) && pos%8 != 8 {
-// 			moves = append(moves, Move{FromPosition: pos, ToPosition: new_pos})
-// 		}
-// 	case Black:
-// 		new_pos := pos - 8
-// 		target := GameState.Board.Board[new_pos]
-// 		if target == 0 {
-// 			moves = append(moves, Move{FromPosition: pos, ToPosition: new_pos})
-// 		}
-// 		if (pos/8)+1 == 7 {
-// 			new_pos = new_pos - 8
-// 			target = GameState.Board.Board[new_pos]
-// 			if target == 0 {
-// 				moves = append(moves, Move{FromPosition: pos, ToPosition: new_pos})
-// 			}
-// 		}
-// 		new_pos = pos - 7
-// 		target = GameState.Board.Board[new_pos]
-// 		_, targetColor := DecodePiece(target)
-// 		if (targetColor != color || new_pos == GameState.EnPassant_target) && pos%8 != 1 {
-// 			moves = append(moves, Move{FromPosition: pos, ToPosition: new_pos})
-// 		}
-// 		new_pos = pos - 9
-// 		target = GameState.Board.Board[new_pos]
-// 		_, targetColor = DecodePiece(target)
-// 		if (targetColor != color || new_pos == GameState.EnPassant_target) && pos%8 != 8 {
-// 			moves = append(moves, Move{FromPosition: pos, ToPosition: new_pos})
-// 		}
-// 	}
-// 	return
-// }
 func generateKnightMoves(pos int, GameState *GameState, color Color) (moves []Move) {
 	for _, c := range knightCandidates {
 		new_pos := pos + c.offset
@@ -202,7 +141,7 @@ func generateBishopMoves(pos int, GameState *GameState, color Color) (moves []Mo
 				break
 			}
 			file := new_pos % 8
-			if (direction.badL && file == 1) || (direction.badR && file == 8) {
+			if (direction.badL && file == 7) || (direction.badR && file == 0) {
 				break
 			}
 			target := GameState.Board.Board[new_pos]
@@ -228,7 +167,7 @@ func generateRookMoves(pos int, GameState *GameState, color Color) (moves []Move
 				break
 			}
 			file := new_pos % 8
-			if (direction.badL && file == 1) || (direction.badR && file == 8) {
+			if (direction.badL && file == 7) || (direction.badR && file == 0) {
 				break
 			}
 			target := GameState.Board.Board[new_pos]

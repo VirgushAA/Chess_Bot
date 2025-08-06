@@ -12,6 +12,8 @@ type GameState struct {
 	History          []Move
 	GameOver         bool
 	EnPassant_target int
+	WhiteScore       int
+	BlackScore       int
 }
 
 func (g *Game) PlayATurn(pos string) {
@@ -30,6 +32,8 @@ func (g *Game) NewGame() {
 	g.GameState.InCheck = false
 	g.GameState.Stalemate = false
 	g.GameState.GameOver = false
+	g.GameState.WhiteScore = 0
+	g.GameState.BlackScore = 0
 }
 func (g *Game) PassMove(pos_from, pos_to Position) Move {
 	move := Move{}
@@ -48,6 +52,12 @@ func (g *Game) MakeAMove(move Move) error {
 		}
 	}
 	if im_legal {
+		if g.GameState.Board.GetPieceType(move.FromPosition) == Pawn {
+			g.processPawnMove(move)
+		}
+		if g.GameState.Board.GetPieceType(move.ToPosition) != 0 && g.GameState.Board.GetPieceColor(move.FromPosition) == g.GameState.Board.GetPieceColor(move.ToPosition) {
+
+		}
 		g.GameState.Board.SetPiece(move.ToPosition, g.GameState.Board.GetPieceType(move.FromPosition), g.GameState.Board.GetPieceColor(move.FromPosition))
 		g.GameState.Board.RemovePiece(move.FromPosition)
 		g.GameState.History = append(g.GameState.History, move)
@@ -56,10 +66,32 @@ func (g *Game) MakeAMove(move Move) error {
 	return nil
 }
 
+func (g *Game) processPawnMove(move Move) {
+	step := 8
+	if g.GameState.Turn == Black {
+		step = -8
+	}
+	if move.ToPosition == move.FromPosition+(step*2) {
+		g.GameState.EnPassant_target = move.FromPosition + step
+	}
+	if move.ToPosition == g.GameState.EnPassant_target {
+		g.GameState.Board.SetPiece(move.ToPosition, g.GameState.Board.GetPieceType(move.ToPosition-step), g.GameState.Board.GetPieceColor(move.ToPosition-step))
+		g.GameState.Board.RemovePiece(move.ToPosition - step)
+	}
+	if move.ToPosition/8 == 7 || move.ToPosition/8 == 0 {
+		g.handlePromotion(move.FromPosition)
+	}
+}
+
 func convertPositionToIndex(pos string) (pos_from, pos_to Position) {
 	from := pos[:2]
 	to := pos[2:]
 	pos_from = Position{Row: int(from[1]) - '1', Col: int(from[0]) - 'a'}
 	pos_to = Position{Row: int(to[1]) - '1', Col: int(to[0]) - 'a'}
 	return
+}
+
+func (g *Game) handlePromotion(pos int) {
+	// Как-то организовать ввод выбора фигуры для повышения вне очередности ходов, пока всегда в ферзя
+	g.GameState.Board.SetPiece(pos, Queen, g.GameState.Board.GetPieceColor(pos))
 }

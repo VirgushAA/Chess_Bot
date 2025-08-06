@@ -10,7 +10,8 @@ var ()
 func main() {
 	game := &Game{}
 	game.GameStart()
-	game.GameState.Board.Print()
+	// game.GameState.Board.Print()
+	PrintField(game.GameState)
 	for !game.GameState.GameOver {
 		print("Введи свой ход! (В формате \"е2-е4\" пожалуйста)\n")
 		var input string
@@ -21,8 +22,91 @@ func main() {
 			continue
 		}
 		game.PlayATurn(pos)
-		game.GameState.Board.Print()
+		PrintField(game.GameState)
+		// game.GameState.Board.Print()
 	}
+}
+
+func PrintField(GameState GameState) {
+	fmt.Println()
+	fmt.Println("\n   _________________________________")
+	for row_ := 7; row_ >= 0; row_-- {
+		row := row_
+		if GameState.Turn == Black {
+			row = 7 - row
+		}
+		fmt.Printf("%d  ", row+1)
+		fmt.Print("|")
+		for col_ := 0; col_ <= 7; col_++ {
+			col := col_
+			if GameState.Turn == Black {
+				col = 7 - col
+			}
+			var symbol string
+			color := GameState.Board.GetPieceColor(row*8 + col)
+			PieceType := GameState.Board.GetPieceType(row*8 + col)
+			switch PieceType {
+			case 0:
+				symbol = "  "
+			case Pawn:
+				if color == White {
+					symbol = " ♟"
+				} else {
+					symbol = " ♙"
+				}
+			case Knight:
+				if color == White {
+					symbol = " ♞"
+				} else {
+					symbol = " ♘"
+				}
+			case Bishop:
+				if color == White {
+					symbol = " ♝"
+				} else {
+					symbol = " ♗"
+				}
+			case Rook:
+				if color == White {
+					symbol = " ♜"
+				} else {
+					symbol = " ♖"
+				}
+			case Queen:
+				if color == White {
+					symbol = " ♛"
+				} else {
+					symbol = " ♕"
+				}
+			case King:
+				if color == White {
+					symbol = " ♚"
+				} else {
+					symbol = " ♔"
+				}
+			default:
+				panic(fmt.Sprintf("Неизвестная фигура, не знаю, как мы тут оказались %v", PieceType))
+			}
+			fmt.Print(symbol + " |")
+
+		}
+		fmt.Print("  |     ")
+		if row == 5 {
+			fmt.Printf("Сейчас ходит мистер %d, его счет:", GameState.Turn, GameState.WhiteScore)
+		}
+		fmt.Println("\n   _________________________________")
+		// fmt.Println()
+	}
+	if GameState.Turn == Black {
+		fmt.Println("\n     H   G   F   E   D   C   B   A\n")
+	} else {
+		fmt.Println("\n     A   B   C   D   E   F   G   H\n")
+	}
+	printSidebar(GameState)
+}
+
+func printSidebar(GameState GameState) {
+
 }
 
 func processMoves(moves string) (processed string, err error) {
