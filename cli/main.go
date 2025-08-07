@@ -130,6 +130,15 @@ func processMoves(moves string) (processed string, err error) {
 	return
 }
 
+func ConvertTurnColor(GameState GameState) (color string) {
+	if GameState.Turn == White {
+		color = "White"
+	} else {
+		color = "Black"
+	}
+	return
+}
+
 func ConvertTurnScore_toInt(GameState GameState, color Color) (score int) {
 	if color == White {
 		score = GameState.WhiteScore
