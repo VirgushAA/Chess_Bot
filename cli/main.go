@@ -3,6 +3,7 @@ package main
 import (
 	. "Chess_Bot/core"
 	"fmt"
+	"strconv"
 )
 
 var ()
@@ -10,7 +11,6 @@ var ()
 func main() {
 	game := &Game{}
 	game.GameStart()
-	// game.GameState.Board.Print()
 	PrintField(game.GameState)
 	for !game.GameState.GameOver {
 		print("Введи свой ход! (В формате \"е2-е4\" пожалуйста)\n")
@@ -23,7 +23,6 @@ func main() {
 		}
 		game.PlayATurn(pos)
 		PrintField(game.GameState)
-		// game.GameState.Board.Print()
 	}
 }
 
@@ -92,7 +91,7 @@ func PrintField(GameState GameState) {
 		}
 		fmt.Print("  |     ")
 		if row == 5 {
-			fmt.Printf("Сейчас ходит мистер %d, его счет:", GameState.Turn, GameState.WhiteScore)
+			fmt.Printf("Сейчас ходит мистер %s, его счёт: %d", ConvertTurnColor(GameState), ConvertTurnScore_toInt(GameState, GameState.Turn))
 		}
 		fmt.Println("\n   _________________________________")
 		// fmt.Println()
@@ -128,5 +127,23 @@ func processMoves(moves string) (processed string, err error) {
 		return "", fmt.Errorf("Я не понимаю что ты хочешь, введи ход нормально!")
 	}
 	processed = from + to
+	return
+}
+
+func ConvertTurnScore_toInt(GameState GameState, color Color) (score int) {
+	if color == White {
+		score = GameState.WhiteScore
+	} else {
+		score = GameState.BlackScore
+	}
+	return
+}
+
+func ConvertTurnScore_toString(GameState GameState, color Color) (score string) {
+	if color == White {
+		score = strconv.Itoa(GameState.WhiteScore)
+	} else {
+		score = strconv.Itoa(GameState.BlackScore)
+	}
 	return
 }
