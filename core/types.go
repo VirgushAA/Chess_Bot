@@ -22,3 +22,18 @@ type Position struct {
 	Row int
 	Col int
 }
+
+const (
+	PawnValue    = 1
+	KnightValues = 3
+	BishopValue  = 3
+	RookValue    = 5
+	QueenValue   = 9
+)
+
+type CastleRights struct {
+	WhiteShortCastleRight bool
+	WhiteLongCastleRight  bool
+	BlackShortCastleRight bool
+	BlackLongCastleRight  bool
+}

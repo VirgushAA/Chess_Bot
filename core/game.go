@@ -1,5 +1,7 @@
 package core
 
+import "slices"
+
 type Game struct {
 	GameState GameState
 }
@@ -14,6 +16,7 @@ type GameState struct {
 	EnPassant_target int
 	WhiteScore       int
 	BlackScore       int
+	CastleRights     CastleRights
 }
 
 func (g *Game) PlayATurn(pos string) {
@@ -34,6 +37,7 @@ func (g *Game) NewGame() {
 	g.GameState.GameOver = false
 	g.GameState.WhiteScore = 0
 	g.GameState.BlackScore = 0
+	g.GameState.CastleRights = CastleRights{true, true, true, true}
 }
 func (g *Game) PassMove(pos_from, pos_to Position) Move {
 	move := Move{}
@@ -44,13 +48,7 @@ func (g *Game) PassMove(pos_from, pos_to Position) Move {
 
 func (g *Game) MakeAMove(move Move) error {
 	legalMoves := GenerateMoves(move.FromPosition, &g.GameState)
-	im_legal := false
-	for _, m := range legalMoves {
-		if move == m {
-			im_legal = true
-			break
-		}
-	}
+	im_legal := slices.Contains(legalMoves, move)
 	if im_legal {
 		if g.GameState.Board.GetPieceType(move.FromPosition) == Pawn {
 			g.processPawnMove(move)

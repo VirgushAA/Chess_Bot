@@ -94,7 +94,6 @@ func PrintField(GameState GameState) {
 			fmt.Printf("Сейчас ходит мистер %s, его счёт: %d", ConvertTurnColor(GameState), ConvertTurnScore_toInt(GameState, GameState.Turn))
 		}
 		fmt.Println("\n   _________________________________")
-		// fmt.Println()
 	}
 	if GameState.Turn == Black {
 		fmt.Println("\n     H   G   F   E   D   C   B   A\n")
