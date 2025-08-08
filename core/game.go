@@ -53,8 +53,8 @@ func (g *Game) MakeAMove(move Move) error {
 		if g.GameState.Board.GetPieceType(move.FromPosition) == Pawn {
 			g.processPawnMove(move)
 		}
-		if g.GameState.Board.GetPieceType(move.ToPosition) != 0 && g.GameState.Board.GetPieceColor(move.FromPosition) == g.GameState.Board.GetPieceColor(move.ToPosition) {
-
+		if g.GameState.Board.GetPieceType(move.ToPosition) != 0 && g.GameState.Board.GetPieceColor(move.FromPosition) != g.GameState.Board.GetPieceColor(move.ToPosition) {
+			g.processCapture(move)
 		}
 		g.GameState.Board.SetPiece(move.ToPosition, g.GameState.Board.GetPieceType(move.FromPosition), g.GameState.Board.GetPieceColor(move.FromPosition))
 		g.GameState.Board.RemovePiece(move.FromPosition)
@@ -78,6 +78,27 @@ func (g *Game) processPawnMove(move Move) {
 	}
 	if move.ToPosition/8 == 7 || move.ToPosition/8 == 0 {
 		g.handlePromotion(move.FromPosition)
+	}
+}
+
+func (g *Game) processCapture(move Move) {
+	score := 0
+	switch g.GameState.Board.GetPieceType(move.ToPosition) {
+	case Pawn:
+		score = PawnValue
+	case Knight:
+		score = KnightValue
+	case Bishop:
+		score = BishopValue
+	case Rook:
+		score = RookValue
+	case Queen:
+		score = QueenValue
+	}
+	if g.GameState.Board.GetPieceColor(move.FromPosition) == Black {
+		g.GameState.BlackScore += score
+	} else {
+		g.GameState.WhiteScore += score
 	}
 }
 
