@@ -74,7 +74,7 @@ func (b *Board) Set(row, col int, val uint8) {
 func (b *Board) Print() {
 	pieceSymbols := [7]string{".", "P", "L", "B", "R", "Q", "K"}
 
-	for r := 7; r >= 0; r-- { // печатаем с 8 рядв по 1 (чтобы белые были снизу)
+	for r := 7; r >= 0; r-- {
 		for c := 0; c < 8; c++ {
 			p := b.At(r, c)
 			pt, color := DecodePiece(p)

@@ -208,6 +208,40 @@ func generateKingMoves(pos int, GameState *GameState, color Color) (moves []Move
 				moves = append(moves, Move{FromPosition: pos, ToPosition: new_pos})
 			}
 		}
+		if canCastleShort(GameState, color) {
+			moves = append(moves, Move{FromPosition: pos, ToPosition: pos + 2})
+		}
+		if canCastleLong(GameState, color) {
+			moves = append(moves, Move{FromPosition: pos, ToPosition: pos - 2})
+		}
 	}
 	return
+}
+
+func canCastleShort(GameState *GameState, color Color) bool {
+	right := false
+	if GameState.CastleRights.BlackShortCastleRight && color == Black {
+		if GameState.Board.GetPieceType(61) == none && GameState.Board.GetPieceType(62) == none {
+			right = true
+		}
+	} else if GameState.CastleRights.WhiteShortCastleRight && color == White {
+		if GameState.Board.GetPieceType(5) == none && GameState.Board.GetPieceType(6) == none {
+			right = true
+		}
+	}
+	return right
+}
+
+func canCastleLong(GameState *GameState, color Color) bool {
+	right := false
+	if GameState.CastleRights.BlackLongCastleRight && color == Black {
+		if GameState.Board.GetPieceType(57) == none && GameState.Board.GetPieceType(58) == none && GameState.Board.GetPieceType(59) == none {
+			right = true
+		}
+	} else if GameState.CastleRights.WhiteLongCastleRight && color == White {
+		if GameState.Board.GetPieceType(1) == none && GameState.Board.GetPieceType(2) == none && GameState.Board.GetPieceType(3) == none {
+			right = true
+		}
+	}
+	return right
 }
