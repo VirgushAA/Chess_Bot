@@ -34,6 +34,11 @@ func (b *Board) Initialize() {
 	b.Board[60] = EncodePiece(King, Black)
 }
 
+func (b *Board) Clone() Board {
+	return *b
+
+}
+
 func (b *Board) GetPieceType(index int) PieceType {
 	value := b.Board[index]
 	return PieceType(value & 0x7) // Маска 0000 0111

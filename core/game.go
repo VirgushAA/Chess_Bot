@@ -47,7 +47,7 @@ func (g *Game) PassMove(pos_from, pos_to Position) Move {
 }
 
 func (g *Game) MakeAMove(move Move) error {
-	legalMoves := GenerateMoves(move.FromPosition, &g.GameState)
+	legalMoves := GenerateLegalMoves(move.FromPosition, &g.GameState)
 	im_legal := slices.Contains(legalMoves, move)
 	if im_legal {
 		if g.GameState.Board.GetPieceType(move.FromPosition) == Pawn {
@@ -60,8 +60,22 @@ func (g *Game) MakeAMove(move Move) error {
 		g.GameState.Board.RemovePiece(move.FromPosition)
 		g.GameState.History = append(g.GameState.History, move)
 		g.GameState.Turn = (g.GameState.Turn + 1) % 2
+		nextMoves := GenerateALLLegalMovesForColor(&g.GameState)
+		g.updaterGameOver(nextMoves)
+
 	}
 	return nil
+}
+
+func (g *Game) updaterGameOver(moves []Move) {
+	if len(moves) == 0 {
+		if g.GameState.InCheck {
+			g.GameState.GameOver = true
+		} else {
+			g.GameState.Stalemate = true
+			g.GameState.GameOver = true
+		}
+	}
 }
 
 func (g *Game) processPawnMove(move Move) {
