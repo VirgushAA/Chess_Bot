@@ -60,7 +60,8 @@ func (g *Game) MakeAMove(move Move) error {
 		g.GameState.Board.RemovePiece(move.FromPosition)
 		g.GameState.History = append(g.GameState.History, move)
 		g.GameState.Turn = (g.GameState.Turn + 1) % 2
-		nextMoves := GenerateALLLegalMovesForColor(&g.GameState)
+		g.GameState.InCheck = InCheck(&g.GameState)
+		nextMoves := GenerateAllLegalMovesForColor(&g.GameState)
 		g.updaterGameOver(nextMoves)
 
 	}

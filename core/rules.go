@@ -311,157 +311,43 @@ func canCastleLong(state *GameState, color Color) bool {
 	return true
 }
 
-// func IsSquareAttacked(square int, attacker Color, state *GameState) bool {
-// 	// --- 1. Pawn attacks ---
-// 	if attacker == White {
-// 		// White pawns attack diagonally up
-// 		if square%8 != 0 && square-9 >= 0 && state.Board.GetPieceType(square-9) == Pawn &&
-// 			state.Board.GetPieceColor(square-9) == White {
-// 			return true
-// 		}
-// 		if square%8 != 7 && square-7 >= 0 && state.Board.GetPieceType(square-7) == Pawn &&
-// 			state.Board.GetPieceColor(square-7) == White {
-// 			return true
-// 		}
-// 	} else {
-// 		// Black pawns attack diagonally down
-// 		if square%8 != 0 && square+7 <= 63 && state.Board.GetPieceType(square+7) == Pawn &&
-// 			state.Board.GetPieceColor(square+7) == Black {
-// 			return true
-// 		}
-// 		if square%8 != 7 && square+9 <= 63 && state.Board.GetPieceType(square+9) == Pawn &&
-// 			state.Board.GetPieceColor(square+9) == Black {
-// 			return true
-// 		}
-// 	}
-
-// 	// --- 2. Knight attacks ---
-// 	for _, km := range knightCandidates {
-// 		target := square + km.offset
-// 		if target < 0 || target > 63 {
-// 			continue
-// 		}
-// 		if km.badL && (square%8 == 0 || square%8 == 1) {
-// 			continue
-// 		}
-// 		if km.badLL && (square%8 == 0 || square%8 == 1 || square%8 == 2) {
-// 			continue
-// 		}
-// 		if km.badR && (square%8 == 7 || square%8 == 6) {
-// 			continue
-// 		}
-// 		if km.badRR && (square%8 == 7 || square%8 == 6 || square%8 == 5) {
-// 			continue
-// 		}
-
-// 		pt, col := DecodePiece(state.Board.Board[target])
-// 		if pt == Knight && col == attacker {
-// 			return true
-// 		}
-// 	}
-
-// 	// --- 3. Sliding pieces ---
-// 	// Bishop / Queen diagonals
-// 	for _, dir := range bishopCandidates {
-// 		pos := square
-// 		for {
-// 			// file := pos % 8
-// 			pos += dir.offset
-// 			if pos < 0 || pos > 63 {
-// 				break
-// 			}
-// 			if (dir.badL && pos%8 == 0) || (dir.badR && pos%8 == 7) {
-// 				break
-// 			}
-// 			pt, col := DecodePiece(state.Board.Board[pos])
-// 			if pt != none {
-// 				if col == attacker && (pt == Bishop || pt == Queen) {
-// 					return true
-// 				}
-// 				break
-// 			}
-// 		}
-// 	}
-
-// 	// Rook / Queen orthogonals
-// 	for _, dir := range rookCandidates {
-// 		pos := square
-// 		for {
-// 			// file := pos % 8
-// 			pos += dir.offset
-// 			if pos < 0 || pos > 63 {
-// 				break
-// 			}
-// 			if (dir.badL && pos%8 == 0) || (dir.badR && pos%8 == 7) {
-// 				break
-// 			}
-// 			pt, col := DecodePiece(state.Board.Board[pos])
-// 			if pt != none {
-// 				if col == attacker && (pt == Rook || pt == Queen) {
-// 					return true
-// 				}
-// 				break
-// 			}
-// 		}
-// 	}
-
-// 	// --- 4. King adjacency ---
-// 	kingOffsets := []int{-9, -8, -7, -1, 1, 7, 8, 9}
-// 	for _, offset := range kingOffsets {
-// 		target := square + offset
-// 		if target < 0 || target > 63 {
-// 			continue
-// 		}
-// 		if abs((square%8)-(target%8)) > 1 {
-// 			continue
-// 		}
-// 		pt, col := DecodePiece(state.Board.Board[target])
-// 		if pt == King && col == attacker {
-// 			return true
-// 		}
-// 	}
-
-// 	return false
+// func LeavesKingInCheck(state *GameState, move Move) bool {
+// 	captured := MakeMoveOnState(state, move)
+// 	inCheck := InCheck(state)
+// 	UndoMoveOnState(state, move, captured)
+// 	return inCheck
 // }
 
-func LeavesKingInCheck(state *GameState, move Move) bool {
-	captured := MakeMoveOnState(state, move)
-	inCheck := InCheck(state)
-	UndoMoveOnState(state, move, captured)
-	return inCheck
-}
-
-func MakeMoveOnState(state *GameState, move Move) (capturedPiece uint8) {
-	capturedPiece = state.Board.Board[move.ToPosition]
-	state.Board.SetPiece(move.ToPosition,
-		state.Board.GetPieceType(move.FromPosition),
-		state.Board.GetPieceColor(move.FromPosition))
-	state.Board.RemovePiece(move.FromPosition)
-	return
-}
-
-func UndoMoveOnState(state *GameState, move Move, capturedPiece uint8) {
-	state.Board.SetPiece(move.FromPosition,
-		state.Board.GetPieceType(move.ToPosition),
-		state.Board.GetPieceColor(move.ToPosition))
-	state.Board.SetPiece(move.ToPosition, state.Board.GetPieceType(int(capturedPiece)), state.Board.GetPieceColor(int(capturedPiece))) // Set original piece back
-}
-
-// func LeavesKingInCheck(GameState *GameState, move Move) bool {
-// 	copyState := *GameState
-// 	copyState.Board = GameState.Board.Clone()
-
-// 	copyState.Board.SetPiece(move.ToPosition, copyState.Board.GetPieceType(move.FromPosition), copyState.Board.GetPieceColor(move.FromPosition))
-// 	copyState.Board.RemovePiece(move.FromPosition)
-
-// 	// повышение может как-то повлиять?
-// 	if copyState.Board.GetPieceType(move.FromPosition) == Pawn &&
-// 		(move.ToPosition/8 == 0 || move.ToPosition/8 == 7) {
-// 		copyState.Board.SetPiece(move.ToPosition, Queen, copyState.Turn) // auto queen for now
-// 	}
-
-// 	return InCheck(&copyState)
+// func MakeMoveOnState(state *GameState, move Move) (capturedPiece uint8) {
+// 	capturedPiece = state.Board.Board[move.ToPosition]
+// 	state.Board.SetPiece(move.ToPosition,
+// 		state.Board.GetPieceType(move.FromPosition),
+// 		state.Board.GetPieceColor(move.FromPosition))
+// 	state.Board.RemovePiece(move.FromPosition)
+// 	return
 // }
+
+// func UndoMoveOnState(state *GameState, move Move, capturedPiece uint8) {
+// 	state.Board.SetPiece(move.FromPosition,
+// 		state.Board.GetPieceType(move.ToPosition),
+// 		state.Board.GetPieceColor(move.ToPosition))
+// 	state.Board.SetPiece(move.ToPosition, state.Board.GetPieceType(int(capturedPiece)), state.Board.GetPieceColor(int(capturedPiece))) // Set original piece back
+// }
+
+func LeavesKingInCheck(GameState *GameState, move Move) bool {
+	copyState := *GameState
+	copyState.Board = GameState.Board.Clone()
+
+	copyState.Board.SetPiece(move.ToPosition, copyState.Board.GetPieceType(move.FromPosition), copyState.Board.GetPieceColor(move.FromPosition))
+	copyState.Board.RemovePiece(move.FromPosition)
+
+	if copyState.Board.GetPieceType(move.FromPosition) == Pawn &&
+		(move.ToPosition/8 == 0 || move.ToPosition/8 == 7) {
+		copyState.Board.SetPiece(move.ToPosition, Queen, copyState.Turn) // auto queen for now
+	}
+
+	return InCheck(&copyState)
+}
 
 func abs(x int) int {
 	if x < 0 {
@@ -486,11 +372,11 @@ func InCheck(GameState *GameState) bool {
 	return IsSquareAttacked(kingPos, (GameState.Turn+1)%2, GameState)
 }
 
-func GenerateALLLegalMovesForColor(state *GameState) []Move {
+func GenerateAllLegalMovesForColor(state *GameState) []Move {
 	moves := make([]Move, 0, 64*8)
 
 	for sq := 0; sq < 64; sq++ {
-		if state.Board.GetPieceColor(sq) == (state.Turn+1)%2 {
+		if state.Board.GetPieceColor(sq) == state.Turn {
 			pseudoLegal := GenerateAllMoves(sq, state)
 			for _, m := range pseudoLegal {
 				if !LeavesKingInCheck(state, m) {
@@ -501,34 +387,6 @@ func GenerateALLLegalMovesForColor(state *GameState) []Move {
 	}
 	return moves
 }
-
-// func canCastleShort(GameState *GameState, color Color) bool {
-// 	right := false
-// 	if GameState.CastleRights.BlackShortCastleRight && color == Black {
-// 		if GameState.Board.GetPieceType(61) == none && GameState.Board.GetPieceType(62) == none {
-// 			right = true
-// 		}
-// 	} else if GameState.CastleRights.WhiteShortCastleRight && color == White {
-// 		if GameState.Board.GetPieceType(5) == none && GameState.Board.GetPieceType(6) == none {
-// 			right = true
-// 		}
-// 	}
-// 	return right
-// }
-
-// func canCastleLong(GameState *GameState, color Color) bool {
-// 	right := false
-// 	if GameState.CastleRights.BlackLongCastleRight && color == Black {
-// 		if GameState.Board.GetPieceType(57) == none && GameState.Board.GetPieceType(58) == none && GameState.Board.GetPieceType(59) == none {
-// 			right = true
-// 		}
-// 	} else if GameState.CastleRights.WhiteLongCastleRight && color == White {
-// 		if GameState.Board.GetPieceType(1) == none && GameState.Board.GetPieceType(2) == none && GameState.Board.GetPieceType(3) == none {
-// 			right = true
-// 		}
-// 	}
-// 	return right
-// }
 
 func IsSquareAttacked(square int, attacker Color, state *GameState) bool {
 	// 1. Pawn attacks
