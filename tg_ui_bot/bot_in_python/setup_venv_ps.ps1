@@ -14,4 +14,4 @@ if (-Not (Test-Path "venv")) {
 pip install -r requirements.txt
 Write-Host "Requirements installed."
 
-# powershell -ExecutionPolicy Bypass -File .\setup_venv.ps1
+# powershell -ExecutionPolicy Bypass -File .\setup_venv_ps.ps1

@@ -5,10 +5,13 @@ import sqlite3
 def create_db():
     con = sqlite3.connect('users.db')
     cur = con.cursor()
-    # cur.execute()
+    cur.execute(''' CREATE TABLE IF NOT EXISTS users ( user_id INTEGER PRIMARY KEY,
+                                                           username TEXT,
+                                                           first_name TEXT,
+                                                           score INTEGER DEFAULT 0 ) ''')
 
 
-    # con.commit()
+    con.commit()
     con.close()
 
 
@@ -30,7 +33,26 @@ async def register_user(user: Update.effective_user):
     con.close()
 
 
+async def leaderboard(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    con = sqlite3.connect('users.db')
+    cur = con.cursor()
+    cur.execute('SELECT first_name, username, score FROM users ORDER BY score DESC')
+    rows = cur.fetchall()
+    con.close()
+
+    if not rows:
+        await update.message.reply_text("Пока нет участников. Ты будешь первым!")
+        return
+
+    leaderboard_text = "🏆 Таблица лидеров:\n\n"
+    for idx, (first_name, username, score) in enumerate(rows, start=1):
+        name = f"{first_name} (@{username})" if username else first_name
+        leaderboard_text += f"{idx}. {name}: {score} побед\n"
+
+    await update.message.reply_text(leaderboard_text)
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await register_user(update.effective_user)
     await update.message.reply_photo(photo=open('images/xdd.jpeg', 'rb'), caption='Приветствую тебя в самом лучшем боте!')
 
 
@@ -40,5 +62,7 @@ if __name__ == "__main__":
     app = ApplicationBuilder().token("7806801443:AAHrpGLx1Gd1WJG6mHuHcB_wAr_cQbTTU6w").build()
 
     app.add_handler(CommandHandler('start', start))
+
+    app.add_handler((CommandHandler('users', leaderboard)))
 
     app.run_polling()
