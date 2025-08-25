@@ -1,6 +1,8 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, CallbackQueryHandler
-import sqlite3
+import sqlite3, requests, re
+
+BASE_URL = "http://localhost:8080"
 
 def create_db():
     con = sqlite3.connect('users.db')
@@ -10,6 +12,10 @@ def create_db():
                                                            first_name TEXT,
                                                            score INTEGER DEFAULT 0 ) ''')
 
+    # cur.execute(''' CREATE TABLE IF NOT EXISTS games ( game_id INTEGER PRIMARY KEY,
+    #                                                            username TEXT,
+    #                                                            first_name TEXT,
+    #                                                            score INTEGER DEFAULT 0 ) ''')
 
     con.commit()
     con.close()
@@ -51,10 +57,35 @@ async def leaderboard(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
     await update.message.reply_text(leaderboard_text)
 
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await register_user(update.effective_user)
     await update.message.reply_photo(photo=open('images/xdd.jpeg', 'rb'), caption='Приветствую тебя в самом лучшем боте!')
 
+
+async def chess_new_game(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    r = requests.get(f"{BASE_URL}/newgame")
+    data = r.json()
+    game_id = data["gameId"]
+
+    await update.message.reply_text(f"♟ Новая игра создана!\nGame ID: {game_id}")
+
+
+
+async def chess_make_move(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not context.args:
+        await update.message.reply_text('Пожалуйста введи ход в формате "e2e4"')
+        return
+
+    move = normalize_move(context.args[0])
+
+
+
+def normalize_move(text: str) -> str:
+    text = text.lower().strip()
+    text = re.sub(r"[-_\s]", "", text)  # Remove separators
+    text = re.sub(r"[^a-h1-8]", "", text)   # Only keep letters/numbers
+    return text[:4]
 
 if __name__ == "__main__":
     create_db()
@@ -63,6 +94,10 @@ if __name__ == "__main__":
 
     app.add_handler(CommandHandler('start', start))
 
-    app.add_handler((CommandHandler('users', leaderboard)))
+    app.add_handler(CommandHandler('users', leaderboard))
+
+    app.add_handler(CommandHandler("/newgame", chess_new_game))
+
+    app.add_handler(CommandHandler("/move", chess_make_move))
 
     app.run_polling()

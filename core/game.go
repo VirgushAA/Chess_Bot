@@ -39,6 +39,7 @@ func (g *Game) NewGame() {
 	g.GameState.BlackScore = 0
 	g.GameState.CastleRights = CastleRights{true, true, true, true}
 }
+
 func (g *Game) PassMove(pos_from, pos_to Position) Move {
 	move := Move{}
 	move.FromPosition = pos_from.Row*8 + pos_from.Col
@@ -63,7 +64,6 @@ func (g *Game) MakeAMove(move Move) error {
 		g.GameState.InCheck = InCheck(&g.GameState)
 		nextMoves := GenerateAllLegalMovesForColor(&g.GameState)
 		g.updaterGameOver(nextMoves)
-
 	}
 	return nil
 }
