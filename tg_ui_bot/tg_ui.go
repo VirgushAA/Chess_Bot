@@ -1,4 +1,4 @@
-package tguibot
+package main
 
 import (
 	. "Chess_Bot/core"
