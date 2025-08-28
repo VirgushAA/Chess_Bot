@@ -5,7 +5,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, Callb
 import sqlite3
 import requests
 import re
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
 BASE_URL = "http://localhost:8080"
 
@@ -65,39 +65,96 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def chess_new_game(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if find_game_with_user(update.effective_user.id):
+        await update.message.reply_text("Нельзя создавать игру уже находясь в игре.")
+        return
+
     r = requests.post(f"{BASE_URL}/newgame")
     data = r.json()
     game_id = data["gameId"]
-    active_sessions[game_id] = {"player_white": update.effective_user.id, "player_black": None}
+    active_sessions[game_id] = {"player_white": update.effective_user.id, "player_black": None, "Turn": 0}
     await update.message.reply_text(f"♟ Новая игра создана!\nGame ID: {game_id}")
-    await send_board_image(update, context, data["state"]["Board"]["Board"])
+    await send_board_image(update, context, data["state"]['Board']['Board'], 1)
+    print(active_sessions)
 
 
 async def chess_join_by_id(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not context.args:
         await update.message.reply_text('Пожалуйста введи ID игры, к которой хочешь присоединиться.')
         return
-    if not (context.args[0] in active_sessions and active_sessions[context.args[0]]['player_black'] is None):
+    if not (context.args[0] in active_sessions):
         await update.message.reply_text('Игры с таким ID не существует.')
-    else:
-        active_sessions[context.args[0]]['player_black'] = update.effective_user.id
+        return
+    game_id = active_sessions[context.args[0]]
+    user_game = find_game_with_user(update.effective_user.id)
+    if user_game is not None and user_game != context.args[0]:
+        await update.message.reply_text("Нельзя присоединиться к чужой игре, если ты уже в игре.")
+        return
+
+    if game_id['player_white'] is None:
+        game_id['player_white'] = update.effective_user.id
         await context.bot.sendMessage(chat_id=active_sessions[context.args[0]]['player_white'],
                                       text='Ваш соперник присоединился к игре!')
         await update.message.reply_text(f"Теперь ты участвуешь в игре с ID {context.args[0]}!")
-        await send_board_image(update, context)
+        await send_default_board_image(update, context, find_players_color_in_game(update.effective_user.id))
+        print(active_sessions)
+    elif game_id['player_black'] is None:
+        game_id['player_black'] = update.effective_user.id
+        await context.bot.sendMessage(chat_id=active_sessions[context.args[0]]['player_white'],
+                                      text='Ваш соперник присоединился к игре!')
+        await update.message.reply_text(f"Теперь ты участвуешь в игре с ID {context.args[0]}!")
+        await send_default_board_image(update, context, find_players_color_in_game(update.effective_user.id))
+        print(active_sessions)
+    else:
+        await update.message.reply_text(f"В это игре все места уже заняты!")
+
+
+async def chess_leave_game(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    player = update.effective_user.id
+    game_id = find_game_with_user(player)
+    game = active_sessions[game_id]
+    requests.post(f"{BASE_URL}/endgame", json={'gameId': game})
+    if game['player_white'] == player:
+        game['player_white'] = None
+    if game['player_black'] == player:
+        game['player_black'] = None
+    await update.message.reply_text('Ты вышел из игры.')
+
+    if game['player_white'] is None and game['player_black'] is None:
+        _ = active_sessions.pop(game_id, None)
+
+    print(active_sessions)
 
 
 async def chess_make_move(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not context.args:
         await update.message.reply_text('Пожалуйста введи ход в формате "e2e4"')
         return
+    game = find_game_with_user(update.effective_user.id)
+    if isinstance(game, tuple):
+        game = game[0]
+    if not game:
+        await update.message.reply_text('Но ты не в игре.')
+        return
+    if (active_sessions[game]['Turn'] != find_players_color_in_game(update.effective_user.id)
+            and find_players_color_in_game(update.effective_user.id) != 'both'):
+        await update.message.reply_text('Сейчас не твой ход.')
+        return
+
+    turn_in = {
+        'gameId': game,
+        'move': ''
+    }
 
     move = normalize_move(context.args[0])
+    print(move)
+    turn_in['move'] = move
+    r = requests.post(f"{BASE_URL}/move", json=turn_in)
 
-    r = requests.post(f"{BASE_URL}/move")
     data = r.json()
-    # gamestate = data["state"]
-    await send_board_image(update, context, data["state"]["Board"]["Board"])
+    active_sessions[game]['Turn'] = (active_sessions[game]['Turn'] + 1) % 2
+    await send_board_image(update, context, data["state"]['Board']['Board'], (data['state']['Turn'] + 1) % 2)
+    print(active_sessions)
 
 
 def render_board(width=400, height=400):
@@ -121,23 +178,38 @@ def render_board(width=400, height=400):
     return img
 
 
-def render_pieces_to_board(img, board):
-    square_size = img.width // 8  # размер одной клетки
-    half_square = square_size // 2
+def render_pieces_to_board(img, board, color=0):
+    square_size = img.width // 8
 
-    for i in range(len(board)):
-        piece_value = board[i]
-        if piece_value != 0:
-            piece_type, piece_color = get_piece_type_color(piece_value)
-            row = i / 8
-            col = i % 8
-            piece_img = Image.open(get_piece_filename(piece_type, piece_color)).resize((50, 50)).convert("RGBA")
-            # x = int(col * (img.width // 8) + (img.width // 16))
-            # y = int(row * (img.height // 8) + (img.height // 16))
-            x = int(col * square_size + half_square - piece_img.width // 2)
-            y = int(row * square_size + half_square - piece_img.height // 2)
-            img.paste(piece_img, (x, y), mask=piece_img)
+    for row in range(7, -1, -1):
+        for col in range(8):
+            i = row * 8 + col
+            piece_value = board[i]
+
+            if piece_value != 0:
+                piece_type, piece_color = get_piece_type_color(piece_value)
+                piece_img = Image.open(get_piece_filename(piece_type, piece_color)).resize((50, 50)).convert("RGBA")
+
+                if color:
+                    x = col * square_size
+                    y = (7 - row) * square_size
+                else:
+                    x = (7 - col) * square_size
+                    y = row * square_size
+                img.paste(piece_img, (x, y), mask=piece_img)
+
     return img
+
+
+# def render_labels_to_board(img, color=0):
+#     draw = ImageDraw.Draw(img)
+#     font = ImageFont.truetype("/System/Library/Fonts/AppleSDGothicNeo.ttc", 20)
+#     square_size = img.width // 8
+
+#             letter = chr(ord('A') + col)
+#             draw.text((x, y), letter, font=font, fill='black', anchor='ms')
+#
+#     return img
 
 
 def get_piece_filename(piece_type, piece_color):
@@ -158,10 +230,23 @@ def get_piece_filename(piece_type, piece_color):
     return filename
 
 
-async def send_board_image(update: Update, context: ContextTypes.DEFAULT_TYPE, board=None) -> None:
+async def send_board_image(update: Update, context: ContextTypes.DEFAULT_TYPE, board=None, color=0) -> None:
     img = render_board()
     if board:
-        img = render_pieces_to_board(img, board)
+        img = render_pieces_to_board(img, board, color)
+
+    with io.BytesIO() as output:
+        img.save(output, 'PNG')
+        output.seek(0)
+        await update.message.reply_photo(photo=output)
+
+
+async def send_default_board_image(update: Update, context: ContextTypes.DEFAULT_TYPE, color=0) -> None:
+    board = [4, 2, 3, 5, 6, 3, 2, 4, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 17, 17, 17, 17, 17, 17, 17, 17, 20, 18, 19, 21, 22, 19, 18, 20]
+
+    img = render_board()
+    img = render_pieces_to_board(img, board, color)
 
     with io.BytesIO() as output:
         img.save(output, 'PNG')
@@ -181,6 +266,26 @@ def get_piece_type_color(piece) -> tuple[int, int]:
     return piece & 0x7, (piece >> 4) & 0x1
 
 
+def find_game_with_user(user_id):
+    for game_id, players in active_sessions.items():
+        if players.get('player_white') == user_id or players.get('player_black') == user_id:
+            return game_id
+    return None
+
+
+def find_players_color_in_game(user_id):
+    game = find_game_with_user(user_id)
+    if game:
+        if active_sessions[game]['player_white'] == user_id:
+            return 0
+        elif active_sessions[game]['player_black'] == user_id:
+            return 1
+        elif active_sessions[game]['player_white'] == user_id and active_sessions[game]['player_black'] == user_id:
+            return 'both'
+
+    return None
+
+
 if __name__ == "__main__":
     active_sessions = {}
     create_db()
@@ -196,5 +301,7 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("move", chess_make_move))
 
     app.add_handler(CommandHandler("join", chess_join_by_id))
+
+    app.add_handler(CommandHandler("leave", chess_leave_game))
 
     app.run_polling()

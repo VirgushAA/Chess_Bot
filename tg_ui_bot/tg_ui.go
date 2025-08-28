@@ -50,6 +50,7 @@ func moveHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Game not found", http.StatusNotFound)
 	}
 
+	print(request.Move)
 	g.PlayATurn(request.Move)
 
 	json.NewEncoder(w).Encode(map[string]any{
@@ -58,8 +59,28 @@ func moveHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func endGameHandler(w http.ResponseWriter, r *http.Request) {
+	var request MoveRequest
+	if err := json.NewDecoder(r.Body).Decode((&request)); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	mutex.Lock()
+	_, ok := games[request.GameID]
+	if ok {
+		delete(games, request.GameID)
+	}
+	mutex.Unlock()
+
+	if !ok {
+		http.Error(w, "Game not found", http.StatusNotFound)
+	}
+}
+
 func main() {
 	http.HandleFunc("/newgame", newGameHandler)
 	http.HandleFunc("/move", moveHandler)
+	http.HandleFunc("/endgame", endGameHandler)
 	http.ListenAndServe(":8080", nil)
 }
