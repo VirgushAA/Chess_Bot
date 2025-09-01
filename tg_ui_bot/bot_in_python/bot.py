@@ -130,10 +130,10 @@ async def chess_game_over(update: Update, context: ContextTypes.DEFAULT_TYPE, st
         winner_color = (active_sessions[game]['Turn'] + 1) % 2
         winner_text = "Белые победили! 🏆" if winner_color == 0 else "Чёрные победили! 🏆"
 
-        for player_id in [game.get('player_white'), game.get('player_black')]:
-            if player_id:
-                await context.bot.sendMessage(chat_id=player_id, text=winner_text)
-                await chess_leave_game(update, context, player_id)
+    for player_id in [game.get('player_white'), game.get('player_black')]:
+        if player_id:
+            await context.bot.sendMessage(chat_id=player_id, text=winner_text)
+            await chess_leave_game(update, context, player_id)
 
 
 async def chess_leave_game(update: Update, context: ContextTypes.DEFAULT_TYPE, player=None) -> None:
