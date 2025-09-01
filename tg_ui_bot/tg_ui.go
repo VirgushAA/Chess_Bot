@@ -36,6 +36,7 @@ func newGameHandler(w http.ResponseWriter, r *http.Request) {
 	})
 	for id := range games {
 		fmt.Println("GameID:", id)
+		fmt.Println()
 	}
 }
 
@@ -84,9 +85,10 @@ func endGameHandler(w http.ResponseWriter, r *http.Request) {
 	// }
 	for id := range games {
 		fmt.Println("GameID:", id)
+		fmt.Println()
 	}
 	if len(games) == 0 {
-		fmt.Print("No active games.")
+		fmt.Print("No active games.\n")
 	}
 }
 

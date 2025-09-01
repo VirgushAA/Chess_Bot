@@ -141,7 +141,6 @@ async def chess_leave_game(update: Update, context: ContextTypes.DEFAULT_TYPE, p
         player = update.effective_user.id
     game_id = find_game_with_user(player)
     game = active_sessions[game_id]
-    requests.post(f"{BASE_URL}/endgame", json={'gameId': game_id})
     if game['player_white'] == player:
         game['player_white'] = None
     if game['player_black'] == player:
@@ -149,6 +148,7 @@ async def chess_leave_game(update: Update, context: ContextTypes.DEFAULT_TYPE, p
     await context.bot.sendMessage(chat_id=player, text='Ты вышел из игры.')
 
     if game['player_white'] is None and game['player_black'] is None:
+        requests.post(f"{BASE_URL}/endgame", json={'gameId': game_id})
         _ = active_sessions.pop(game_id, None)
 
     print(active_sessions)
@@ -181,7 +181,7 @@ async def chess_make_move(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     data = r.json()
     active_sessions[game]['Turn'] = (active_sessions[game]['Turn'] + 1) % 2
-    await send_board_image(update, context, data["state"]['Board']['Board'], (data['state']['Turn'] + 1) % 2)
+    await send_board_image(update, context, data["state"]['Board']['Board'], data['state']['Turn'])
 
     if find_players_color_in_game(update.effective_user.id) != 'both':
         opponent_id = (active_sessions[game]['player_white']
@@ -189,6 +189,9 @@ async def chess_make_move(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                        else active_sessions[game]['player_black'])
         if opponent_id is not None:
             await send_board_image(opponent_id, context, data["state"]['Board']['Board'], (data['state']['Turn'] + 1) % 2)
+
+    if data['state']['GameOver']:
+        await chess_game_over(update, context, data['state'])
 
     print(active_sessions)
 
