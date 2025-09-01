@@ -1,4 +1,5 @@
 import io
+from tarfile import tar_filter
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, CallbackQueryHandler
@@ -74,7 +75,8 @@ async def chess_new_game(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     game_id = data["gameId"]
     active_sessions[game_id] = {"player_white": update.effective_user.id, "player_black": None, "Turn": 0}
     await update.message.reply_text(f"♟ Новая игра создана!\nGame ID: {game_id}")
-    await send_board_image(update, context, data["state"]['Board']['Board'], 1)
+    await send_board_image(update, context, data["state"]['Board']['Board'],
+                           find_players_color_in_game(update.effective_user.id))
     print(active_sessions)
 
 
@@ -96,14 +98,14 @@ async def chess_join_by_id(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         await context.bot.sendMessage(chat_id=active_sessions[context.args[0]]['player_white'],
                                       text='Ваш соперник присоединился к игре!')
         await update.message.reply_text(f"Теперь ты участвуешь в игре с ID {context.args[0]}!")
-        await send_default_board_image(update, context, find_players_color_in_game(update.effective_user.id))
+        await send_default_board_image(update, context, (find_players_color_in_game(update.effective_user.id) + 1) % 2)
         print(active_sessions)
     elif game_id['player_black'] is None:
         game_id['player_black'] = update.effective_user.id
         await context.bot.sendMessage(chat_id=active_sessions[context.args[0]]['player_white'],
                                       text='Ваш соперник присоединился к игре!')
         await update.message.reply_text(f"Теперь ты участвуешь в игре с ID {context.args[0]}!")
-        await send_default_board_image(update, context, find_players_color_in_game(update.effective_user.id))
+        await send_default_board_image(update, context, (find_players_color_in_game(update.effective_user.id) + 1) % 2)
         print(active_sessions)
     else:
         await update.message.reply_text(f"В это игре все места уже заняты!")
@@ -154,6 +156,13 @@ async def chess_make_move(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     data = r.json()
     active_sessions[game]['Turn'] = (active_sessions[game]['Turn'] + 1) % 2
     await send_board_image(update, context, data["state"]['Board']['Board'], (data['state']['Turn'] + 1) % 2)
+
+    opponent_id = (active_sessions[game]['player_white']
+                   if active_sessions[game]['player_black'] == update.effective_user.id
+                   else active_sessions[game]['player_black'])
+
+    await send_board_image(opponent_id, context, data["state"]['Board']['Board'], (data['state']['Turn'] + 1) % 2)
+
     print(active_sessions)
 
 
@@ -230,7 +239,7 @@ def get_piece_filename(piece_type, piece_color):
     return filename
 
 
-async def send_board_image(update: Update, context: ContextTypes.DEFAULT_TYPE, board=None, color=0) -> None:
+async def send_board_image(target, context: ContextTypes.DEFAULT_TYPE, board=None, color=0) -> None:
     img = render_board()
     if board:
         img = render_pieces_to_board(img, board, color)
@@ -238,10 +247,14 @@ async def send_board_image(update: Update, context: ContextTypes.DEFAULT_TYPE, b
     with io.BytesIO() as output:
         img.save(output, 'PNG')
         output.seek(0)
-        await update.message.reply_photo(photo=output)
+
+        if isinstance(target, Update):
+            await target.message.reply_photo(photo=output)
+        else:
+            await context.bot.sendPhoto(chat_id=target, photo=output)
 
 
-async def send_default_board_image(update: Update, context: ContextTypes.DEFAULT_TYPE, color=0) -> None:
+async def send_default_board_image(target, context: ContextTypes.DEFAULT_TYPE, color=0) -> None:
     board = [4, 2, 3, 5, 6, 3, 2, 4, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
              0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 17, 17, 17, 17, 17, 17, 17, 17, 20, 18, 19, 21, 22, 19, 18, 20]
 
@@ -251,7 +264,11 @@ async def send_default_board_image(update: Update, context: ContextTypes.DEFAULT
     with io.BytesIO() as output:
         img.save(output, 'PNG')
         output.seek(0)
-        await update.message.reply_photo(photo=output)
+
+        if isinstance(target, Update):
+            await target.message.reply_photo(photo=output)
+        else:
+            await context.bot.sendPhoto(chat_id=target, photo=output)
 
 
 def normalize_move(text: str) -> str:
@@ -276,12 +293,12 @@ def find_game_with_user(user_id):
 def find_players_color_in_game(user_id):
     game = find_game_with_user(user_id)
     if game:
-        if active_sessions[game]['player_white'] == user_id:
+        if active_sessions[game]['player_white'] == user_id and active_sessions[game]['player_black'] == user_id:
+            return 'both'
+        elif active_sessions[game]['player_white'] == user_id:
             return 0
         elif active_sessions[game]['player_black'] == user_id:
             return 1
-        elif active_sessions[game]['player_white'] == user_id and active_sessions[game]['player_black'] == user_id:
-            return 'both'
 
     return None
 
