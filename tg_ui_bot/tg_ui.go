@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"github.com/google/uuid"
 	// "log"
+	"fmt"
 	"net/http"
 	"sync"
 )
@@ -33,6 +34,9 @@ func newGameHandler(w http.ResponseWriter, r *http.Request) {
 		"gameId": id,
 		"state":  g.GameState,
 	})
+	for id := range games {
+		fmt.Println("GameID:", id)
+	}
 }
 
 func moveHandler(w http.ResponseWriter, r *http.Request) {
@@ -56,7 +60,6 @@ func moveHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]any{
 		"state": g.GameState,
 	})
-
 }
 
 func endGameHandler(w http.ResponseWriter, r *http.Request) {
@@ -75,6 +78,15 @@ func endGameHandler(w http.ResponseWriter, r *http.Request) {
 
 	if !ok {
 		http.Error(w, "Game not found", http.StatusNotFound)
+	}
+	// for id, g := range games {
+	// 	fmt.Printf("GameID: %s, Game state: %+v\n", id, g)
+	// }
+	for id := range games {
+		fmt.Println("GameID:", id)
+	}
+	if len(games) == 0 {
+		fmt.Print("No active games.")
 	}
 }
 

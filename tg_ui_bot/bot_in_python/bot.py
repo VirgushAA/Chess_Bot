@@ -8,7 +8,13 @@ import requests
 import re
 from PIL import Image, ImageDraw, ImageFont
 
-BASE_URL = "http://localhost:8080"
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+BOT_TOKEN = os.getenv('BOT_TOKEN')
+BASE_URL = os.getenv('CHESS_API_URL')
 
 
 def create_db():
@@ -76,7 +82,7 @@ async def chess_new_game(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     active_sessions[game_id] = {"player_white": update.effective_user.id, "player_black": None, "Turn": 0}
     await update.message.reply_text(f"♟ Новая игра создана!\nGame ID: {game_id}")
     await send_board_image(update, context, data["state"]['Board']['Board'],
-                           find_players_color_in_game(update.effective_user.id))
+                           (find_players_color_in_game(update.effective_user.id) + 1) % 2)
     print(active_sessions)
 
 
@@ -98,29 +104,49 @@ async def chess_join_by_id(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         await context.bot.sendMessage(chat_id=active_sessions[context.args[0]]['player_white'],
                                       text='Ваш соперник присоединился к игре!')
         await update.message.reply_text(f"Теперь ты участвуешь в игре с ID {context.args[0]}!")
-        await send_default_board_image(update, context, (find_players_color_in_game(update.effective_user.id) + 1) % 2)
+        await send_default_board_image(update, context, (find_players_color_in_game(update.effective_user.id) + 1) % 2
+                                       if find_players_color_in_game(update.effective_user.id) != 'both' else 1)
         print(active_sessions)
     elif game_id['player_black'] is None:
         game_id['player_black'] = update.effective_user.id
         await context.bot.sendMessage(chat_id=active_sessions[context.args[0]]['player_white'],
                                       text='Ваш соперник присоединился к игре!')
         await update.message.reply_text(f"Теперь ты участвуешь в игре с ID {context.args[0]}!")
-        await send_default_board_image(update, context, (find_players_color_in_game(update.effective_user.id) + 1) % 2)
+        await send_default_board_image(update, context, (find_players_color_in_game(update.effective_user.id) + 1) % 2
+                                       if find_players_color_in_game(update.effective_user.id) != 'both' else 0)
         print(active_sessions)
     else:
         await update.message.reply_text(f"В это игре все места уже заняты!")
 
 
-async def chess_leave_game(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    player = update.effective_user.id
+async def chess_game_over(update: Update, context: ContextTypes.DEFAULT_TYPE, state) ->None:
+    game = find_game_with_user(update.effective_user.id)
+    if not game:
+        return
+
+    if state["Stalemate"]:
+        winner_text = "Ничья! 🤝"
+    else:
+        winner_color = (active_sessions[game]['Turn'] + 1) % 2
+        winner_text = "Белые победили! 🏆" if winner_color == 0 else "Чёрные победили! 🏆"
+
+        for player_id in [game.get('player_white'), game.get('player_black')]:
+            if player_id:
+                await context.bot.sendMessage(chat_id=player_id, text=winner_text)
+                await chess_leave_game(update, context, player_id)
+
+
+async def chess_leave_game(update: Update, context: ContextTypes.DEFAULT_TYPE, player=None) -> None:
+    if player is None:
+        player = update.effective_user.id
     game_id = find_game_with_user(player)
     game = active_sessions[game_id]
-    requests.post(f"{BASE_URL}/endgame", json={'gameId': game})
+    requests.post(f"{BASE_URL}/endgame", json={'gameId': game_id})
     if game['player_white'] == player:
         game['player_white'] = None
     if game['player_black'] == player:
         game['player_black'] = None
-    await update.message.reply_text('Ты вышел из игры.')
+    await context.bot.sendMessage(chat_id=player, text='Ты вышел из игры.')
 
     if game['player_white'] is None and game['player_black'] is None:
         _ = active_sessions.pop(game_id, None)
@@ -157,11 +183,12 @@ async def chess_make_move(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     active_sessions[game]['Turn'] = (active_sessions[game]['Turn'] + 1) % 2
     await send_board_image(update, context, data["state"]['Board']['Board'], (data['state']['Turn'] + 1) % 2)
 
-    opponent_id = (active_sessions[game]['player_white']
-                   if active_sessions[game]['player_black'] == update.effective_user.id
-                   else active_sessions[game]['player_black'])
-
-    await send_board_image(opponent_id, context, data["state"]['Board']['Board'], (data['state']['Turn'] + 1) % 2)
+    if find_players_color_in_game(update.effective_user.id) != 'both':
+        opponent_id = (active_sessions[game]['player_white']
+                       if active_sessions[game]['player_black'] == update.effective_user.id
+                       else active_sessions[game]['player_black'])
+        if opponent_id is not None:
+            await send_board_image(opponent_id, context, data["state"]['Board']['Board'], (data['state']['Turn'] + 1) % 2)
 
     print(active_sessions)
 
@@ -307,7 +334,7 @@ if __name__ == "__main__":
     active_sessions = {}
     create_db()
 
-    app = ApplicationBuilder().token("7806801443:AAHrpGLx1Gd1WJG6mHuHcB_wAr_cQbTTU6w").build()
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler('start', start))
 

@@ -2,3 +2,4 @@ setuptools
 python-telegram-bot
 pillow
 requests
+python-dotenv
