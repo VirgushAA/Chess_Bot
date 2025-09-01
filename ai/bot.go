@@ -24,3 +24,8 @@ func BestMove(state *core.GameState, depth int) core.Move {
 	}
 	return bestMove
 }
+
+func MakeAMoveAI(g *core.Game) {
+	best_move := BestMove(&g.GameState, 5)
+	g.MakeAMove(best_move)
+}

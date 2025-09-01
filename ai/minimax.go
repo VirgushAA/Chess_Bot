@@ -21,7 +21,6 @@ func minimax(state *core.GameState, depth int, maximazing bool) int {
 			next := *state
 			next.Board = state.Board.Clone()
 			next.Turn = state.Turn
-			next.History = append(next.History, state.History...)
 			next.History = append([]core.Move(nil), state.History...)
 
 			g := core.Game{GameState: next}

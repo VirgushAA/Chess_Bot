@@ -121,17 +121,22 @@ async def chess_join_by_id(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
 async def chess_game_over(update: Update, context: ContextTypes.DEFAULT_TYPE, state) ->None:
     game = find_game_with_user(update.effective_user.id)
+    print(1)
     if not game:
         return
-
+    print(2)
     if state["Stalemate"]:
         winner_text = "Ничья! 🤝"
+        print(3)
     else:
         winner_color = (active_sessions[game]['Turn'] + 1) % 2
         winner_text = "Белые победили! 🏆" if winner_color == 0 else "Чёрные победили! 🏆"
+        print(4)
 
-    for player_id in [game.get('player_white'), game.get('player_black')]:
+    for player_id in [active_sessions[game].get('player_white'), active_sessions[game].get('player_black')]:
+        print(5)
         if player_id:
+            print(6)
             await context.bot.sendMessage(chat_id=player_id, text=winner_text)
             await chess_leave_game(update, context, player_id)
 
@@ -180,7 +185,6 @@ async def chess_make_move(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     r = requests.post(f"{BASE_URL}/move", json=turn_in)
 
     data = r.json()
-    active_sessions[game]['Turn'] = (active_sessions[game]['Turn'] + 1) % 2
     await send_board_image(update, context, data["state"]['Board']['Board'], data['state']['Turn'])
 
     if find_players_color_in_game(update.effective_user.id) != 'both':
@@ -193,6 +197,7 @@ async def chess_make_move(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if data['state']['GameOver']:
         await chess_game_over(update, context, data['state'])
 
+    active_sessions[game]['Turn'] = (active_sessions[game]['Turn'] + 1) % 2
     print(active_sessions)
 
 
