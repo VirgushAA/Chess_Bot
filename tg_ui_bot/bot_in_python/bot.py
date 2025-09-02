@@ -68,7 +68,22 @@ async def leaderboard(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await register_user(update.effective_user)
-    await update.message.reply_photo(photo=open('images/xdd.jpeg', 'rb'), caption='Приветствую тебя в самом лучшем боте!')
+    await update.message.reply_photo(photo=open('images/xdd.jpeg', 'rb'),
+                                     caption='Приветствую тебя в самом лучшем боте!'
+                                             '/help для списка доступных команд.')
+
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text('Вот такие команды доступны для взаимодействия с шахматным ботом:\n'
+                                    '/ng - создаст новую игру, где ты будешь булым игроком по умолчанию.\n'
+                                    '/ng ai - создаст новую игру, против бота, ты снова на белых.\n'
+                                    '/join {Game ID} - присоединиться к существующей игре по id,'
+                                    'заняв свободное место.\n'
+                                    '/leave - выйти из игры.\n'
+                                    '/users - выводит список игроков и их счет.\n'
+                                    '/move e2e4 - сделает ход, заметь что формат ввода достаточно жесткий,\n'
+                                    'и если \'_\' иди \'-\' допустимы, то пробел нет.\n'
+                                    '/help - выводит список доступных команд.')
 
 
 async def chess_new_game(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -79,7 +94,16 @@ async def chess_new_game(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     r = requests.post(f"{BASE_URL}/newgame")
     data = r.json()
     game_id = data["gameId"]
-    active_sessions[game_id] = {"player_white": update.effective_user.id, "player_black": None, "Turn": 0}
+    game = {"player_white": update.effective_user.id, "player_black": None, "Turn": 0}
+    active_sessions[game_id] = game
+
+    if context.args:
+        if context.args[0] == 'ai':
+            if game['player_white'] is None:
+                game['player_white'] = 0
+            elif game['player_black'] is None:
+                game['player_black'] = 0
+
     await update.message.reply_text(f"♟ Новая игра создана!\nGame ID: {game_id}")
     await send_board_image(update, context, data["state"]['Board']['Board'],
                            (find_players_color_in_game(update.effective_user.id) + 1) % 2)
@@ -152,7 +176,9 @@ async def chess_leave_game(update: Update, context: ContextTypes.DEFAULT_TYPE, p
         game['player_black'] = None
     await context.bot.sendMessage(chat_id=player, text='Ты вышел из игры.')
 
-    if game['player_white'] is None and game['player_black'] is None:
+    if (game['player_white'] is None and game['player_black'] is None)\
+            or (game['player_white'] is None and game['player_black'] == 0)\
+            or (game['player_white'] == 0 and game['player_black'] is None):
         requests.post(f"{BASE_URL}/endgame", json={'gameId': game_id})
         _ = active_sessions.pop(game_id, None)
 
@@ -163,19 +189,19 @@ async def chess_make_move(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if not context.args:
         await update.message.reply_text('Пожалуйста введи ход в формате "e2e4"')
         return
-    game = find_game_with_user(update.effective_user.id)
-    if isinstance(game, tuple):
-        game = game[0]
-    if not game:
+    game_id = find_game_with_user(update.effective_user.id)
+    if isinstance(game_id, tuple):
+        game_id = game_id[0]
+    if not game_id:
         await update.message.reply_text('Но ты не в игре.')
         return
-    if (active_sessions[game]['Turn'] != find_players_color_in_game(update.effective_user.id)
+    if (active_sessions[game_id]['Turn'] != find_players_color_in_game(update.effective_user.id)
             and find_players_color_in_game(update.effective_user.id) != 'both'):
         await update.message.reply_text('Сейчас не твой ход.')
         return
 
     turn_in = {
-        'gameId': game,
+        'gameId': game_id,
         'move': ''
     }
 
@@ -184,21 +210,46 @@ async def chess_make_move(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     turn_in['move'] = move
     r = requests.post(f"{BASE_URL}/move", json=turn_in)
 
+    game = active_sessions.get(game_id)
     data = r.json()
     await send_board_image(update, context, data["state"]['Board']['Board'], data['state']['Turn'])
 
-    if find_players_color_in_game(update.effective_user.id) != 'both':
-        opponent_id = (active_sessions[game]['player_white']
-                       if active_sessions[game]['player_black'] == update.effective_user.id
-                       else active_sessions[game]['player_black'])
+    if find_players_color_in_game(update.effective_user.id) != 'both' and ai_turn(game):
+        opponent_id = (game['player_white']
+                       if game['player_black'] == update.effective_user.id
+                       else game['player_black'])
         if opponent_id is not None:
             await send_board_image(opponent_id, context, data["state"]['Board']['Board'], (data['state']['Turn'] + 1) % 2)
 
     if data['state']['GameOver']:
         await chess_game_over(update, context, data['state'])
 
-    active_sessions[game]['Turn'] = (active_sessions[game]['Turn'] + 1) % 2
+    game['Turn'] = (game['Turn'] + 1) % 2
+
+    if ai_turn(game):
+        turn_in = {
+            'gameId': game_id,
+            'move': ''
+        }
+        await update.message.reply_text("Бот думает!")
+        r = requests.post(f"{BASE_URL}/moveAI", json=turn_in)
+        data = r.json()
+        await update.message.reply_text("Бот подумал, вот его ход.")
+        await send_board_image(update, context, data["state"]['Board']['Board'], (data['state']['Turn'] + 1) % 2)
+
+        if data['state']['GameOver']:
+            await chess_game_over(update, context, data['state'])
+
+        game['Turn'] = (game['Turn'] + 1) % 2
+
     print(active_sessions)
+
+
+def ai_turn(game) -> bool:
+    if (game["player_white"] == 0 and game['Turn'] == 0) or (game["player_black"] == 0 and game['Turn'] == 1):
+        return True
+    else:
+        return False
 
 
 def render_board(width=400, height=400):
@@ -346,9 +397,11 @@ if __name__ == "__main__":
 
     app.add_handler(CommandHandler('start', start))
 
+    app.add_handler(CommandHandler('help', help_command))
+
     app.add_handler(CommandHandler('users', leaderboard))
 
-    app.add_handler(CommandHandler("newgame", chess_new_game))
+    app.add_handler(CommandHandler("ng", chess_new_game))
 
     app.add_handler(CommandHandler("move", chess_make_move))
 

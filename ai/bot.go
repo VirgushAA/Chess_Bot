@@ -1,6 +1,10 @@
 package ai
 
-import "Chess_Bot/core"
+import (
+	"Chess_Bot/core"
+	"math/rand"
+	"time"
+)
 
 func BestMove(state *core.GameState, depth int) core.Move {
 	moves := core.GenerateAllLegalMovesForColor(state)
@@ -22,10 +26,16 @@ func BestMove(state *core.GameState, depth int) core.Move {
 			bestMove = move
 		}
 	}
+	if bestScore == 0 {
+		rand.New(rand.NewSource(time.Now().UnixNano()))
+		randomIndex := rand.Intn(len(moves))
+
+		bestMove = moves[randomIndex]
+	}
 	return bestMove
 }
 
 func MakeAMoveAI(g *core.Game) {
-	best_move := BestMove(&g.GameState, 5)
+	best_move := BestMove(&g.GameState, 3)
 	g.MakeAMove(best_move)
 }

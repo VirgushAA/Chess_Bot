@@ -1,6 +1,7 @@
 package main
 
 import (
+	. "Chess_Bot/ai"
 	. "Chess_Bot/core"
 	"encoding/json"
 	"github.com/google/uuid"
@@ -63,6 +64,28 @@ func moveHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func moveHandlerAI(w http.ResponseWriter, r *http.Request) {
+	var request MoveRequest
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	mutex.Lock()
+	g, ok := games[request.GameID]
+	mutex.Unlock()
+
+	if !ok {
+		http.Error(w, "Game not found", http.StatusNotFound)
+	}
+
+	MakeAMoveAI(g)
+
+	json.NewEncoder(w).Encode(map[string]any{
+		"state": g.GameState,
+	})
+}
+
 func endGameHandler(w http.ResponseWriter, r *http.Request) {
 	var request MoveRequest
 	if err := json.NewDecoder(r.Body).Decode((&request)); err != nil {
@@ -96,5 +119,6 @@ func main() {
 	http.HandleFunc("/newgame", newGameHandler)
 	http.HandleFunc("/move", moveHandler)
 	http.HandleFunc("/endgame", endGameHandler)
+	http.HandleFunc("/moveAI", moveHandlerAI)
 	http.ListenAndServe(":8080", nil)
 }

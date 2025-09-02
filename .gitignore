@@ -19,4 +19,4 @@ __pycache__/
 *.db
 
 # среда
-tg_ui_bot/bot_in_python/venv/
+venv/
