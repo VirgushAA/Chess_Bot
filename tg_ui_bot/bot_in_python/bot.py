@@ -219,7 +219,8 @@ async def chess_make_move(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                        if game['player_black'] == update.effective_user.id
                        else game['player_black'])
         if opponent_id is not None:
-            await send_board_image(opponent_id, context, data["state"]['Board']['Board'], (data['state']['Turn'] + 1) % 2)
+            await send_board_image(opponent_id, context, data["state"]['Board']['Board'],
+                                   (data['state']['Turn'] + 1) % 2)
 
     if data['state']['GameOver']:
         await chess_game_over(update, context, data['state'])

@@ -36,6 +36,6 @@ func BestMove(state *core.GameState, depth int) core.Move {
 }
 
 func MakeAMoveAI(g *core.Game) {
-	best_move := BestMove(&g.GameState, 3)
+	best_move := BestMove(&g.GameState, 2)
 	g.MakeAMove(best_move)
 }
