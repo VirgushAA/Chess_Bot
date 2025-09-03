@@ -1,6 +1,9 @@
 package core
 
-import "slices"
+import (
+	"fmt"
+	"slices"
+)
 
 type Game struct {
 	GameState GameState
@@ -10,6 +13,7 @@ type GameState struct {
 	Board            Board
 	Turn             Color
 	InCheck          bool
+	Mate             bool
 	Stalemate        bool
 	History          []Move
 	GameOver         bool
@@ -19,10 +23,19 @@ type GameState struct {
 	CastleRights     CastleRights
 }
 
-func (g *Game) PlayATurn(pos string) {
+func (g *Game) PlayATurn(pos string) error {
 
-	pos_from, pos_to := convertPositionToIndex(pos)
-	g.MakeAMove(g.PassMove(pos_from, pos_to))
+	pos_from, pos_to, errmv := convertPositionToIndex(pos)
+	if errmv != nil {
+		return errmv
+	}
+
+	err := g.MakeAMove(g.PassMove(pos_from, pos_to))
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (g *Game) GameStart() {
@@ -63,7 +76,12 @@ func (g *Game) MakeAMove(move Move) error {
 		g.GameState.Turn = (g.GameState.Turn + 1) % 2
 		g.GameState.InCheck = InCheck(&g.GameState)
 		nextMoves := GenerateAllLegalMovesForColor(&g.GameState)
+		fmt.Println()
+		fmt.Println(nextMoves)
+		fmt.Println()
 		g.updaterGameOver(nextMoves)
+	} else {
+		return fmt.Errorf("Неверный ход! Ходи еще раз!")
 	}
 	return nil
 }
@@ -71,6 +89,7 @@ func (g *Game) MakeAMove(move Move) error {
 func (g *Game) updaterGameOver(moves []Move) {
 	if len(moves) == 0 {
 		if g.GameState.InCheck {
+			g.GameState.Mate = true
 			g.GameState.GameOver = true
 		} else {
 			g.GameState.Stalemate = true
@@ -87,9 +106,14 @@ func (g *Game) processPawnMove(move Move) {
 	if move.ToPosition == move.FromPosition+(step*2) {
 		g.GameState.EnPassant_target = move.FromPosition + step
 	}
-	if move.ToPosition == g.GameState.EnPassant_target {
+	if move.ToPosition == g.GameState.EnPassant_target && g.GameState.Board.GetPieceColor(move.ToPosition) != g.GameState.Board.GetPieceColor(move.FromPosition) {
 		g.GameState.Board.SetPiece(move.ToPosition, g.GameState.Board.GetPieceType(move.ToPosition-step), g.GameState.Board.GetPieceColor(move.ToPosition-step))
 		g.GameState.Board.RemovePiece(move.ToPosition - step)
+		if g.GameState.Board.GetPieceColor(move.FromPosition) == Black {
+			g.GameState.BlackScore += 1
+		} else {
+			g.GameState.WhiteScore += 1
+		}
 	}
 	if move.ToPosition/8 == 7 || move.ToPosition/8 == 0 {
 		g.handlePromotion(move.FromPosition)
@@ -117,12 +141,27 @@ func (g *Game) processCapture(move Move) {
 	}
 }
 
-func convertPositionToIndex(pos string) (pos_from, pos_to Position) {
+func convertPositionToIndex(pos string) (pos_from, pos_to Position, err error) {
+	if len(pos) != 4 {
+		return Position{}, Position{}, fmt.Errorf("Неверный формат ввода, нужно ровно 4 символа.")
+	}
+
 	from := pos[:2]
 	to := pos[2:]
-	pos_from = Position{Row: int(from[1]) - '1', Col: int(from[0]) - 'a'}
-	pos_to = Position{Row: int(to[1]) - '1', Col: int(to[0]) - 'a'}
-	return
+
+	rowFrom := int(from[1]) - '1'
+	colFrom := int(from[0]) - 'a'
+	rowTo := int(to[1]) - '1'
+	colTo := int(to[0]) - 'a'
+
+	if rowFrom < 0 || rowFrom > 7 || colFrom < 0 || colFrom > 7 || rowTo < 0 || rowTo > 7 || colTo < 0 || colTo > 7 {
+		return Position{}, Position{}, fmt.Errorf(("Координаты вне доски!"))
+	}
+
+	pos_from = Position{Row: rowFrom, Col: colFrom}
+	pos_to = Position{Row: rowTo, Col: colTo}
+
+	return pos_from, pos_to, nil
 }
 
 func (g *Game) handlePromotion(pos int) {

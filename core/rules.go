@@ -113,7 +113,7 @@ func generatePawnMoves(pos int, gs *GameState, color Color) (moves []Move) {
 			if targetColor != color {
 				moves = append(moves, Move{FromPosition: pos, ToPosition: diagPos})
 			}
-		} else if diagPos == gs.EnPassant_target {
+		} else if diagPos == gs.EnPassant_target && gs.Board.GetPieceColor(diagPos+dir) != color {
 			moves = append(moves, Move{FromPosition: pos, ToPosition: diagPos})
 		}
 	}

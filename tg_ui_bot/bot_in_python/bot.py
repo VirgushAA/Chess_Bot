@@ -82,7 +82,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
                                     '/leave - выйти из игры.\n'
                                     '/users - выводит список игроков и их счет.\n'
                                     '/move e2e4 - сделает ход, заметь что формат ввода достаточно жесткий,\n'
-                                    'и если \'_\' иди \'-\' допустимы, то пробел нет.\n'
+                                    'и если \'_\' или \'-\' допустимы, то пробел нет.\n'
                                     '/help - выводит список доступных команд.')
 
 
@@ -143,24 +143,18 @@ async def chess_join_by_id(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         await update.message.reply_text(f"В это игре все места уже заняты!")
 
 
-async def chess_game_over(update: Update, context: ContextTypes.DEFAULT_TYPE, state) ->None:
+async def chess_game_over(update: Update, context: ContextTypes.DEFAULT_TYPE, state) -> None:
     game = find_game_with_user(update.effective_user.id)
-    print(1)
     if not game:
         return
-    print(2)
     if state["Stalemate"]:
         winner_text = "Ничья! 🤝"
-        print(3)
     else:
-        winner_color = (active_sessions[game]['Turn'] + 1) % 2
+        winner_color = active_sessions[game]['Turn']
         winner_text = "Белые победили! 🏆" if winner_color == 0 else "Чёрные победили! 🏆"
-        print(4)
 
     for player_id in [active_sessions[game].get('player_white'), active_sessions[game].get('player_black')]:
-        print(5)
         if player_id:
-            print(6)
             await context.bot.sendMessage(chat_id=player_id, text=winner_text)
             await chess_leave_game(update, context, player_id)
 
@@ -169,6 +163,9 @@ async def chess_leave_game(update: Update, context: ContextTypes.DEFAULT_TYPE, p
     if player is None:
         player = update.effective_user.id
     game_id = find_game_with_user(player)
+    if not game_id:
+        await update.message.reply_text("Ты не в игре")
+        return
     game = active_sessions[game_id]
     if game['player_white'] == player:
         game['player_white'] = None
@@ -212,6 +209,10 @@ async def chess_make_move(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     game = active_sessions.get(game_id)
     data = r.json()
+    if not data['mv_valid']:
+        await update.message.reply_text('Неверный ход! Ходи правильно!')
+        return
+
     await send_board_image(update, context, data["state"]['Board']['Board'], data['state']['Turn'])
 
     if find_players_color_in_game(update.effective_user.id) != 'both' and ai_turn(game):
@@ -221,6 +222,11 @@ async def chess_make_move(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         if opponent_id is not None:
             await send_board_image(opponent_id, context, data["state"]['Board']['Board'],
                                    (data['state']['Turn'] + 1) % 2)
+
+    print(data['state']['GameOver'])
+    print(data['state']['Stalemate'])
+    print(data['state']['InCheck'])
+    print(data['state']['Turn'])
 
     if data['state']['GameOver']:
         await chess_game_over(update, context, data['state'])
@@ -238,11 +244,18 @@ async def chess_make_move(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await update.message.reply_text("Бот подумал, вот его ход.")
         await send_board_image(update, context, data["state"]['Board']['Board'], (data['state']['Turn'] + 1) % 2)
 
+        print(data['state']['GameOver'])
+        print(data['state']['Stalemate'])
+        print(data['state']['InCheck'])
+        print(data['state']['Turn'])
+
         if data['state']['GameOver']:
             await chess_game_over(update, context, data['state'])
 
         game['Turn'] = (game['Turn'] + 1) % 2
 
+
+    print(data['state'])
     print(active_sessions)
 
 

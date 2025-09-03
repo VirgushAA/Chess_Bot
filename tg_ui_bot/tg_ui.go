@@ -57,10 +57,15 @@ func moveHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	print(request.Move)
-	g.PlayATurn(request.Move)
+	err := g.PlayATurn(request.Move)
+	valid_move := true
+	if err != nil {
+		valid_move = false
+	}
 
 	json.NewEncoder(w).Encode(map[string]any{
-		"state": g.GameState,
+		"state":    g.GameState,
+		"mv_valid": valid_move,
 	})
 }
 
@@ -79,10 +84,15 @@ func moveHandlerAI(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Game not found", http.StatusNotFound)
 	}
 
-	MakeAMoveAI(g)
+	err := MakeAMoveAI(g)
+	valid_move := true
+	if err != nil {
+		valid_move = false
+	}
 
 	json.NewEncoder(w).Encode(map[string]any{
-		"state": g.GameState,
+		"state":    g.GameState,
+		"mv_valid": valid_move,
 	})
 }
 
