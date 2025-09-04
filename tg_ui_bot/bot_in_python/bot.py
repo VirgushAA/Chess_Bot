@@ -1,12 +1,12 @@
 import io
-from tarfile import tar_filter
+# from tarfile import tar_filter
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, CallbackQueryHandler
 import sqlite3
 import requests
 import re
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 
 from dotenv import load_dotenv
 import os
@@ -125,7 +125,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text('Вот такие команды доступны для взаимодействия с шахматным ботом:\n'
-                                    '/ng - создаст новую игру, где ты будешь булым игроком по умолчанию.\n'
+                                    '/ng - создаст новую игру, где ты будешь белым игроком по умолчанию.\n'
                                     '/ng ai - создаст новую игру, против бота, ты снова на белых.\n'
                                     '/join {Game ID} - присоединиться к существующей игре по id, '
                                     'заняв свободное место.\n'
