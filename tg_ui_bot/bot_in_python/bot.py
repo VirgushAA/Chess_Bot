@@ -47,6 +47,56 @@ async def register_user(user: Update.effective_user):
     con.close()
 
 
+async def chess_update_score(user_id) -> None:
+    con = sqlite3.connect('users.db')
+    cur = con.cursor()
+    cur.execute('''UPDATE users SET score = score + 1 WHERE user_id = ?''', (user_id,))
+    con.commit()
+    con.close()
+
+
+async def chess_show_games(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    con = sqlite3.connect('users.db')
+    cur = con.cursor()
+    cur.execute('SELECT user_id, first_name, username FROM users ORDER BY first_name DESC')
+    rows = cur.fetchall()
+    con.close()
+
+    if not rows:
+        await update.message.reply_text("Пока нет участников. Ты будешь первым!")
+        return
+    if len(active_sessions) == 0:
+        await update.message.reply_text("Сейчас нет активных игр. Чтобы создать свою используй команду /ng или /ng ai")
+        return
+
+    user_dict = {user_id: (first_name, username) for user_id, first_name, username in rows}
+
+    games_text = "Список активных игр:\n\n"
+    for idx, (game_id, game_data) in enumerate(active_sessions.items()):
+        white_user_id = game_data.get('player_white')
+        black_user_id = game_data.get('player_black')
+
+        white_first_name, white_username = user_dict.get(white_user_id, ('Свободно', ''))
+        black_first_name, black_username = user_dict.get(black_user_id, ('Свободно', ''))
+
+        white_name = f"{white_first_name} (@{white_username})" if white_username else white_first_name
+        black_name = f"{black_first_name} (@{black_username})" if black_username else black_first_name
+
+        print(white_user_id)
+        print(black_user_id)
+
+        if white_user_id == 0:
+            white_name = 'Великолепный Vindicao_Chess_Bot'
+        if black_user_id == 0:
+            black_name = 'Великолепный Vindicao_Chess_Bot'
+
+        games_text += f"{idx + 1}, GameID: {game_id}\n"
+        games_text += f"На белых: {white_name}\n"
+        games_text += f"На черных: {black_name}\n\n"
+
+        await update.message.reply_text(games_text)
+
+
 async def leaderboard(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     con = sqlite3.connect('users.db')
     cur = con.cursor()
@@ -77,10 +127,11 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     await update.message.reply_text('Вот такие команды доступны для взаимодействия с шахматным ботом:\n'
                                     '/ng - создаст новую игру, где ты будешь булым игроком по умолчанию.\n'
                                     '/ng ai - создаст новую игру, против бота, ты снова на белых.\n'
-                                    '/join {Game ID} - присоединиться к существующей игре по id,'
+                                    '/join {Game ID} - присоединиться к существующей игре по id, '
                                     'заняв свободное место.\n'
                                     '/leave - выйти из игры.\n'
                                     '/users - выводит список игроков и их счет.\n'
+                                    '/games - выводит список активных игр.\n'
                                     '/move e2e4 - сделает ход, заметь что формат ввода достаточно жесткий,\n'
                                     'и если \'_\' или \'-\' допустимы, то пробел нет.\n'
                                     '/help - выводит список доступных команд.')
@@ -149,12 +200,17 @@ async def chess_game_over(update: Update, context: ContextTypes.DEFAULT_TYPE, st
         return
     if state["Stalemate"]:
         winner_text = "Ничья! 🤝"
+        winner_id = None
     else:
         winner_color = active_sessions[game]['Turn']
-        winner_text = "Белые победили! 🏆" if winner_color == 0 else "Чёрные победили! 🏆"
+        winner_text, winner_id = (("Белые победили! 🏆", active_sessions[game].get('player_white'))
+                                  if winner_color == 0
+                                  else ("Чёрные победили! 🏆", active_sessions[game].get('player_black')))
 
     for player_id in [active_sessions[game].get('player_white'), active_sessions[game].get('player_black')]:
         if player_id:
+            if winner_id is not None:
+                await chess_update_score(winner_id)
             await context.bot.sendMessage(chat_id=player_id, text=winner_text)
             await chess_leave_game(update, context, player_id)
 
@@ -223,11 +279,6 @@ async def chess_make_move(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             await send_board_image(opponent_id, context, data["state"]['Board']['Board'],
                                    (data['state']['Turn'] + 1) % 2)
 
-    print(data['state']['GameOver'])
-    print(data['state']['Stalemate'])
-    print(data['state']['InCheck'])
-    print(data['state']['Turn'])
-
     if data['state']['GameOver']:
         await chess_game_over(update, context, data['state'])
 
@@ -244,18 +295,11 @@ async def chess_make_move(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await update.message.reply_text("Бот подумал, вот его ход.")
         await send_board_image(update, context, data["state"]['Board']['Board'], (data['state']['Turn'] + 1) % 2)
 
-        print(data['state']['GameOver'])
-        print(data['state']['Stalemate'])
-        print(data['state']['InCheck'])
-        print(data['state']['Turn'])
-
         if data['state']['GameOver']:
             await chess_game_over(update, context, data['state'])
 
         game['Turn'] = (game['Turn'] + 1) % 2
 
-
-    print(data['state'])
     print(active_sessions)
 
 
@@ -414,6 +458,8 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler('help', help_command))
 
     app.add_handler(CommandHandler('users', leaderboard))
+
+    app.add_handler(CommandHandler('games', chess_show_games))
 
     app.add_handler(CommandHandler("ng", chess_new_game))
 
